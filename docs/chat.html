@@ -114,6 +114,70 @@ min-width: 0 позволяет тексту корректно
 }
 
 /* ========================================
+   УПРАВЛЕНИЕ КОМНАТОЙ
+========================================
+
+Поле Room позволяет:
+
+- ввести имя существующей комнаты;
+- изменить имя до подключения;
+- получить случайное имя кнопкой Create room.
+
+После успешного подключения поле блокируется,
+потому что активную LiveKit-комнату нельзя
+переименовать без переподключения.
+*/
+
+.room-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-input {
+  width: 180px;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #0f172a;
+  color: white;
+  font: inherit;
+  outline: none;
+}
+
+.room-input:focus { border-color: #2563eb; }
+.room-input:disabled { opacity: 0.55; }
+.create-room-btn { background: #0f766e; }
+
+.invite-link {
+  width: 100%;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #0b1220;
+}
+
+.invite-link.visible { display: flex; }
+
+.invite-link input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #020617;
+  color: #cbd5e1;
+}
+
+.copy-link-btn {
+  padding: 9px 12px;
+  background: #475569;
+}
+
+/* ========================================
    ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
 ========================================
 
@@ -681,6 +745,32 @@ main {
   <div class="controls">
 
     <!--
+    Поле имени комнаты и кнопка генерации.
+    Имя можно изменить вручную до подключения.
+    -->
+
+    <div class="room-controls">
+
+      <input
+        id="roomInput"
+        class="room-input"
+        type="text"
+        maxlength="64"
+        data-i18n-placeholder="roomName"
+        placeholder="Room name"
+      />
+
+      <button
+        id="createRoomBtn"
+        class="create-room-btn"
+        type="button"
+        data-i18n="createRoom">
+        Create room
+      </button>
+
+    </div>
+
+    <!--
     Переключатель языка интерфейса.
     Выбранный язык сохраняется в localStorage.
     -->
@@ -749,6 +839,30 @@ main {
   </div>
 
 </header>
+
+<!--
+После создания комнаты здесь появляется готовая
+ссылка, которую можно отправить другому участнику.
+-->
+
+<div id="inviteLinkBox"
+     class="invite-link">
+
+  <input
+    id="inviteLinkInput"
+    type="text"
+    readonly
+  />
+
+  <button
+    id="copyLinkBtn"
+    class="copy-link-btn"
+    type="button"
+    data-i18n="copyLink">
+    Copy link
+  </button>
+
+</div>
 
 <!--
 Основная область приложения.
@@ -874,8 +988,8 @@ const params =
 Если параметра нет, используется test-room.
 */
 
-const roomName =
-  params.get("room") || "test-room";
+let roomName =
+  (params.get("room") || "").trim();
 
 /*
 Имя участника берётся из параметра name.
@@ -930,7 +1044,12 @@ const translations = {
     unknown: "неизвестно",
     videoError: "ошибка видео",
     audioError: "ошибка аудио",
-    connectionError: "ошибка подключения"
+    connectionError: "ошибка подключения",
+    roomName: "Название комнаты",
+    createRoom: "Создать комнату",
+    copyLink: "Копировать ссылку",
+    copied: "ссылка скопирована",
+    enterRoom: "введите название комнаты"
   },
 
   en: {
@@ -955,7 +1074,12 @@ const translations = {
     unknown: "unknown",
     videoError: "video error",
     audioError: "audio error",
-    connectionError: "connection error"
+    connectionError: "connection error",
+    roomName: "Room name",
+    createRoom: "Create room",
+    copyLink: "Copy link",
+    copied: "link copied",
+    enterRoom: "enter a room name"
   }
 };
 
@@ -1148,6 +1272,101 @@ const ruBtn =
 const enBtn =
   document.getElementById("enBtn");
 
+const roomInput =
+  document.getElementById("roomInput");
+
+const createRoomBtn =
+  document.getElementById("createRoomBtn");
+
+const inviteLinkBox =
+  document.getElementById("inviteLinkBox");
+
+const inviteLinkInput =
+  document.getElementById("inviteLinkInput");
+
+const copyLinkBtn =
+  document.getElementById("copyLinkBtn");
+
+
+/*
+========================================
+СОЗДАНИЕ И ПЕРЕИМЕНОВАНИЕ КОМНАТЫ
+========================================
+*/
+
+function normalizeRoomName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}_-]/gu, "")
+    .slice(0, 64);
+}
+
+function generateRoomName() {
+  const randomPart = crypto.randomUUID()
+    .replace(/-/g, "")
+    .slice(0, 8);
+  return "room-" + randomPart;
+}
+
+function buildInviteLink(name) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", name);
+  url.searchParams.delete("name");
+  return url.toString();
+}
+
+function applyRoomName(name) {
+  roomName = normalizeRoomName(name);
+  roomInput.value = roomName;
+
+  const url = new URL(window.location.href);
+
+  if (roomName) {
+    url.searchParams.set("room", roomName);
+    inviteLinkInput.value = buildInviteLink(roomName);
+    inviteLinkBox.classList.add("visible");
+  } else {
+    url.searchParams.delete("room");
+    inviteLinkInput.value = "";
+    inviteLinkBox.classList.remove("visible");
+  }
+
+  history.replaceState(null, "", url);
+  localStorage.setItem("vpnRoomLastRoom", roomName);
+  updateConnectionStatus();
+}
+
+function createRoomName() {
+  if (isConnected) return;
+  applyRoomName(generateRoomName());
+  roomInput.focus();
+  roomInput.select();
+}
+
+function handleRoomInputChange() {
+  if (isConnected) {
+    roomInput.value = roomName;
+    return;
+  }
+  applyRoomName(roomInput.value);
+}
+
+async function copyInviteLink() {
+  if (!inviteLinkInput.value) return;
+  try {
+    await navigator.clipboard.writeText(inviteLinkInput.value);
+  } catch (error) {
+    inviteLinkInput.select();
+    document.execCommand("copy");
+  }
+  statusBox.textContent = t("copied");
+}
+
+function initializeRoomName() {
+  const savedRoom = localStorage.getItem("vpnRoomLastRoom") || "";
+  applyRoomName(roomName || savedRoom);
+}
 
 /*
 ========================================
@@ -1162,18 +1381,11 @@ const enBtn =
 function updateConnectionStatus() {
 
   if (isConnected) {
-
-    statusBox.textContent =
-      t("connected")
-      + ": "
-      + roomName
-      + " | "
-      + identity;
-
+    statusBox.textContent = t("connected") + ": " + roomName + " | " + identity;
+  } else if (!roomName) {
+    statusBox.textContent = t("enterRoom");
   } else {
-
-    statusBox.textContent =
-      t("notConnected");
+    statusBox.textContent = t("notConnected") + ": " + roomName;
   }
 }
 
@@ -2046,6 +2258,14 @@ async function joinRoom() {
   if (room)
     return;
 
+  applyRoomName(roomInput.value);
+
+  if (!roomName) {
+    statusBox.textContent = t("enterRoom");
+    roomInput.focus();
+    return;
+  }
+
   try {
 
     joinBtn.disabled =
@@ -2220,6 +2440,9 @@ async function joinRoom() {
     isConnected =
       true;
 
+    roomInput.disabled = true;
+    createRoomBtn.disabled = true;
+
     if (
       videoCheck.checked
     ) {
@@ -2371,6 +2594,9 @@ function resetDisconnectedState() {
   isConnected =
     false;
 
+  roomInput.disabled = false;
+  createRoomBtn.disabled = false;
+
   if (room) {
 
     room.localParticipant
@@ -2499,23 +2725,49 @@ enBtn.addEventListener(
   () => setLanguage("en")
 );
 
+createRoomBtn.addEventListener(
+  "click",
+  createRoomName
+);
+
+roomInput.addEventListener(
+  "change",
+  handleRoomInputChange
+);
+
+roomInput.addEventListener(
+  "keydown",
+  event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleRoomInputChange();
+      joinRoom();
+    }
+  }
+);
+
+copyLinkBtn.addEventListener(
+  "click",
+  copyInviteLink
+);
+
 /*
 Применяем начальное состояние Messages
 и выбранный язык сразу после загрузки модуля.
 */
 
 applyMessagesState();
+initializeRoomName();
 applyLanguage();
 
 </script>
 
 <!--
-Сервисная строка версии.
-Она не влияет на работу LiveKit.
+Сервисная консоль.
 -->
 
 <div id="service-console">
-  ru/en switch | v1.2.0
+  create room | v1.3.0
 </div>
 
 <div class="row" id="build-down">
@@ -2525,9 +2777,15 @@ applyLanguage();
 <script>
 
 /*
-Этот отдельный обычный script выводит
-дату и время загрузки страницы.
-Он не связан с подключением к комнате.
+поле названия комнаты;
+кнопка Создать комнату / Create room;
+автоматическая генерация имени вроде room-a83fd729;
+название можно вручную изменить до подключения;
+готовая ссылка-приглашение;
+кнопка копирования ссылки;
+последняя выбранная комната сохраняется в localStorage;
+после подключения поле блокируется;
+RU/EN работает и для новых элементов
 */
 
 (function () {
