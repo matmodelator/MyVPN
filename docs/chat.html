@@ -89,6 +89,21 @@ min-width: 0 позволяет тексту корректно
 
 .header-left {
   min-width: 0;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.header-language {
+  grid-row: 1 / span 2;
+  align-self: start;
+}
+
+.header-left .title,
+.header-left #status {
+  min-width: 0;
 }
 
 .title {
@@ -664,6 +679,15 @@ main {
   opacity: 0.5;
 }
 
+.chat-actions {
+  padding: 10px;
+  border-top: 1px solid #263244;
+}
+
+.chat-actions button {
+  width: 100%;
+}
+
 /* ========================================
    СЕРВИСНАЯ КОНСОЛЬ
 ========================================
@@ -755,7 +779,7 @@ header {
 }
 
 main {
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-columns: 330px minmax(0, 1fr) 330px;
 }
 
 .event-console {
@@ -808,6 +832,14 @@ main {
   color: #64748b;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.event-meta {
+  margin: 5px 0 0 30px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .console-actions {
@@ -966,8 +998,19 @@ button.secondary { background: #475569; }
   -->
 
   <div class="header-left">
+
+    <!--
+    Переключатель языка перенесён в левый верхний угол.
+    -->
+
+    <div class="language-switch header-language">
+      <button id="ruBtn" class="language-btn active" type="button">RU</button>
+      <button id="enBtn" class="language-btn" type="button">EN</button>
+    </div>
+
     <div class="title" data-i18n="title">VPN Room</div>
     <div id="status">not connected</div>
+
   </div>
 
   <!--
@@ -997,16 +1040,30 @@ button.secondary { background: #475569; }
   </div>
 
   <!--
-  Справа остаются язык и галочки режимов.
+  Справа находятся Add file и галочки режимов.
   Кнопка подключения перенесена вниз по центру.
   -->
 
   <div class="header-right">
 
-    <div class="language-switch">
-      <button id="ruBtn" class="language-btn active" type="button">RU</button>
-      <button id="enBtn" class="language-btn" type="button">EN</button>
-    </div>
+    <!--
+    Кнопка выбора вложения находится справа сверху.
+    Скрытый input открывает системный выбор файла.
+    -->
+
+    <input
+      id="fileInput"
+      type="file"
+      hidden
+    />
+
+    <button
+      id="addFileBtn"
+      class="secondary"
+      type="button"
+      data-i18n="addFile">
+      Add file
+    </button>
 
     <div class="mode-options">
 
@@ -1135,7 +1192,7 @@ button.secondary { background: #475569; }
           type="text"
           maxlength="40"
           data-i18n-placeholder="yourName"
-          placeholder="Your name"
+          placeholder="Your name (optional)"
         />
         <button id="joinBtn" type="button" data-i18n="join">Join</button>
         <button id="leaveBtn" class="danger" type="button" disabled>
@@ -1186,6 +1243,24 @@ button.secondary { background: #475569; }
         id="sendBtn"
         disabled>
         <span data-i18n="send">Send</span>
+      </button>
+
+    </div>
+
+    <!--
+    Кнопка очищает только отображаемую историю
+    в этом браузере. Переданные сообщения у других
+    участников она не удаляет.
+    -->
+
+    <div class="chat-actions">
+
+      <button
+        id="clearChatBtn"
+        class="secondary"
+        type="button"
+        data-i18n="clearChat">
+        Clear chat
       </button>
 
     </div>
@@ -1322,10 +1397,12 @@ const translations = {
     copyLink: "Копировать ссылку",
     copied: "ссылка скопирована",
     enterRoom: "введите название комнаты",
-    yourName: "Введите ваше имя",
-    enterName: "введите ваше имя",
+    yourName: "Имя — необязательно",
+    enterName: "используется ID участника",
     eventConsole: "Консоль событий",
     clearConsole: "Очистить консоль",
+    clearChat: "Очистить чат",
+    addFile: "Добавить файл",
     approvalRequired: "Вход только после одобрения создателем комнаты",
     joinRequest: "Запрос на вход",
     userWantsToJoin: "Пользователь хочет присоединиться к комнате",
@@ -1370,10 +1447,12 @@ const translations = {
     copyLink: "Copy link",
     copied: "link copied",
     enterRoom: "enter a room name",
-    yourName: "Enter your name",
-    enterName: "enter your name",
+    yourName: "Name — optional",
+    enterName: "participant ID is used",
     eventConsole: "Event console",
     clearConsole: "Clear console",
+    clearChat: "Clear chat",
+    addFile: "Add file",
     approvalRequired: "Entry requires creator approval",
     joinRequest: "Join request",
     userWantsToJoin: "A user wants to join this room",
@@ -1637,41 +1716,111 @@ const requestGuestId = document.getElementById("requestGuestId");
 const approveBtn = document.getElementById("approveBtn");
 const rejectBtn = document.getElementById("rejectBtn");
 
-function addEvent(type, text) {
+const clearChatBtn =
+  document.getElementById("clearChatBtn");
+
+const addFileBtn =
+  document.getElementById("addFileBtn");
+
+const fileInput =
+  document.getElementById("fileInput");
+
+function addEvent(
+  type,
+  text,
+  participantId = ""
+) {
+
   const icons = {
     joined: "🟢",
     left: "🟠",
     request: "👤",
     approved: "✅",
     rejected: "⛔",
+    file: "📎",
     system: "ℹ️"
   };
 
-  const item = document.createElement("div");
-  item.className = "event-item";
+  const item =
+    document.createElement("div");
 
-  const top = document.createElement("div");
-  top.className = "event-top";
+  item.className =
+    "event-item";
 
-  const icon = document.createElement("div");
-  icon.className = "event-icon";
-  icon.textContent = icons[type] || "•";
+  const top =
+    document.createElement("div");
 
-  const eventText = document.createElement("div");
-  eventText.className = "event-text";
-  eventText.textContent = text;
+  top.className =
+    "event-top";
 
-  const time = document.createElement("div");
-  time.className = "event-time";
-  time.textContent = new Date().toLocaleTimeString(
-    currentLanguage === "ru" ? "ru-RU" : "en-US",
-    { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+  const icon =
+    document.createElement("div");
+
+  icon.className =
+    "event-icon";
+
+  icon.textContent =
+    icons[type] || "•";
+
+  const eventText =
+    document.createElement("div");
+
+  eventText.className =
+    "event-text";
+
+  eventText.textContent =
+    text;
+
+  const time =
+    document.createElement("div");
+
+  time.className =
+    "event-time";
+
+  time.textContent =
+    new Date().toLocaleTimeString(
+      currentLanguage === "ru"
+        ? "ru-RU"
+        : "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  const meta =
+    document.createElement("div");
+
+  meta.className =
+    "event-meta";
+
+  meta.textContent =
+    "ID: "
+    + (
+      participantId
+      || identity
+      || browserId
+    )
+    + " | Room: "
+    + (
+      roomName
+      || "—"
+    );
+
+  top.append(
+    icon,
+    eventText,
+    time
   );
 
-  top.append(icon, eventText, time);
   item.appendChild(top);
+  item.appendChild(meta);
+
   eventList.appendChild(item);
-  eventList.scrollTop = eventList.scrollHeight;
+
+  eventList.scrollTop =
+    eventList.scrollHeight;
 }
 
 function restoreCreatorStatus() {
@@ -1700,7 +1849,11 @@ async function openAccessChannel() {
       requestGuestName.textContent = payload.name;
       requestGuestId.textContent = payload.browserId.slice(0, 18);
       approvalOverlay.classList.add("visible");
-      addEvent("request", payload.name + " " + t("requestedAccess"));
+      addEvent(
+        "request",
+        payload.name + " " + t("requestedAccess"),
+        payload.browserId
+      );
     }
   );
 
@@ -1744,9 +1897,19 @@ async function answerJoinRequest(approved) {
   });
 
   addEvent(
-    approved ? "approved" : "rejected",
-    request.name + " — " +
-      (approved ? t("requestApproved") : t("requestDenied"))
+    approved
+      ? "approved"
+      : "rejected",
+
+    request.name
+      + " — "
+      + (
+        approved
+          ? t("requestApproved")
+          : t("requestDenied")
+      ),
+
+    request.browserId
   );
 
   currentJoinRequest = null;
@@ -1756,15 +1919,26 @@ async function answerJoinRequest(approved) {
 async function requestAccess() {
   if (room) return;
 
-  identity = nameInput.value.trim();
+  const enteredName =
+    nameInput.value.trim();
 
-  if (!identity) {
-    joinNote.textContent = t("enterName");
-    nameInput.focus();
-    return;
+  identity =
+    enteredName
+    || browserId;
+
+  if (enteredName) {
+
+    localStorage.setItem(
+      "vpnRoomUserName",
+      enteredName
+    );
+
+  } else {
+
+    localStorage.removeItem(
+      "vpnRoomUserName"
+    );
   }
-
-  localStorage.setItem("vpnRoomUserName", identity);
 
   await applyRoomName(roomInput.value);
 
@@ -1795,6 +1969,7 @@ async function requestAccess() {
       requestId: pendingRequestId,
       browserId: browserId,
       name: identity,
+      participantId: browserId,
       timestamp: Date.now()
     }
   });
@@ -2802,13 +2977,12 @@ function applyMessagesState() {
 
 async function joinRoom() {
 
-  identity = nameInput.value.trim();
+  const enteredName =
+    nameInput.value.trim();
 
-  if (!identity) {
-    joinNote.textContent = t("enterName");
-    nameInput.focus();
-    return;
-  }
+  identity =
+    enteredName
+    || browserId;
 
   /*
   Защита от повторного Join,
@@ -3363,7 +3537,7 @@ applyLanguage();
 -->
 
 <div id="service-console">
-  realtime approval | v1.4.0
+  equal panels + file button | v1.5.0
 </div>
 
 <div class="row" id="build-down">
@@ -3373,14 +3547,18 @@ applyLanguage();
 <script>
 
 /*
-слева добавлена консоль событий;
-по центру остались видеополя;
-запрос на вход появляется поверх видео у создателя;
-поле имени и кнопка Подключиться находятся снизу по центру;
-Создать комнату находится сверху по центру;
-одобрение работает через Supabase Realtime Broadcast;
-никаких таблиц и никакого SQL не требуется;
-если создателя нет на странице, через 15 секунд выводится, что он не отвечает.
+консоль и мессенджер теперь одинаковой ширины — по 330px;
+добавлена кнопка Очистить чат;
+в каждом событии консоли выводятся:
+имя или ID;
+название комнаты;
+время;
+имя стало необязательным;
+если имя пустое, участник подключается под своим browserId;
+RU/EN перенесены в левый верхний угол;
+справа сверху добавлена кнопка Добавить файл;
+выбор файла уже открывается и фиксируется в консоли;
+сама загрузка файла в Supabase Storage пока не подключена.
 */
 
 (function () {
