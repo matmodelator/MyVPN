@@ -5,11 +5,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>MVP Video Room</title>
+<title>VPN Video Room</title>
 
-<!-- СТИЛЬ КОНСОЛИ -->
-<link rel="stylesheet"
-      href="styles/console.css" />
 
 <style>
 * {
@@ -613,69 +610,45 @@ leaveBtn.addEventListener(
 
 <!-- ========================================
      SERVICE CONSOLE
-     Верхняя строка редактируется вручную
-     Здесь задается:
-     - название страницы
-     - номер версии
 ======================================== -->
 
 <div id="service-console">
-
-  <div class="row" id="build-top">
-
-  from video-room (MVP)| v1.0.0
-
-  </div>
-
-  <div class="row" id="build-down">
-
-    deploy: --
-
-  </div>
-
+console  | v1.0.1
 </div>
 
-<!-- ========================================
-     SCRIPT
-     Автоматически выводит:
-     - дату
-     - время
-     Момент загрузки страницы
-======================================== -->
+<div class="row" id="build-down">
+deploy: --
+</div>
 
 <script>
-
 (function () {
-
-  const now =
-    new Date();
+  const now = new Date();
 
   const pad = n =>
-    String(n).padStart(2, '0');
+    String(n).padStart(2, "0");
 
   const date =
       pad(now.getDate())
-    + '.'
+    + "."
     + pad(now.getMonth() + 1)
-    + '.'
+    + "."
     + now.getFullYear();
 
   const time =
       pad(now.getHours())
-    + ':'
+    + ":"
     + pad(now.getMinutes());
 
   document
-    .getElementById('build-down')
+    .getElementById("build-down")
     .textContent =
-      'deploy: '
+      "deploy: "
       + date
-      + ' '
+      + " "
       + time;
-
 })();
-
 </script>
+
 
 </body>
 </html>
