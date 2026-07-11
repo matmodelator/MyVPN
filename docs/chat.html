@@ -1066,9 +1066,9 @@ const translations = {
     noVideo: "No active video",
     joinChat: "Join the room to start chatting",
     notConnected: "not connected",
-    disconnected: t("disconnected"),
-    gettingToken: t("gettingToken"),
-    connecting: t("connecting"),
+    disconnected: "disconnected",
+    gettingToken: "getting token...",
+    connecting: "connecting...",
     connected: "connected",
     you: "you",
     unknown: "unknown",
@@ -1303,10 +1303,29 @@ function normalizeRoomName(value) {
 }
 
 function generateRoomName() {
-  const randomPart = crypto.randomUUID()
-    .replace(/-/g, "")
-    .slice(0, 8);
-  return "room-" + randomPart;
+  /*
+  Не используем crypto.randomUUID(), потому что
+  он может быть недоступен при локальном открытии
+  страницы или в некоторых браузерах.
+
+  Date.now() добавляет текущий момент времени,
+  Math.random() — случайную часть.
+  */
+
+  const timePart =
+    Date.now().toString(36);
+
+  const randomPart =
+    Math.random()
+      .toString(36)
+      .slice(2, 8);
+
+  return (
+    "room-"
+    + timePart
+    + "-"
+    + randomPart
+  );
 }
 
 function buildInviteLink(name) {
@@ -2763,11 +2782,11 @@ applyLanguage();
 </script>
 
 <!--
-Сервисная консоль.
+Сервисная консоль
 -->
 
 <div id="service-console">
-  create room | v1.3.0
+  create room | v1.3.1
 </div>
 
 <div class="row" id="build-down">
@@ -2777,15 +2796,12 @@ applyLanguage();
 <script>
 
 /*
-поле названия комнаты;
-кнопка Создать комнату / Create room;
-автоматическая генерация имени вроде room-a83fd729;
-название можно вручную изменить до подключения;
-готовая ссылка-приглашение;
-кнопка копирования ссылки;
-последняя выбранная комната сохраняется в localStorage;
-после подключения поле блокируется;
-RU/EN работает и для новых элементов
+Теперь Create room должна:
+
+сгенерировать имя вроде room-mabc123-x7k9pq;
+вставить его в поле Room;
+обновить URL;
+показать ссылку-приглашение.
 */
 
 (function () {
