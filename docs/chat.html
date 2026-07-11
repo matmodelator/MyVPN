@@ -719,6 +719,239 @@ main {
     width: 100%;
   }
 }
+
+
+/* ========================================
+   НОВЫЙ МАКЕТ: КОНСОЛЬ / ВИДЕО / ЧАТ
+========================================
+
+Слева находится консоль событий.
+По центру — видеополя и запрос на вход.
+Справа сохраняется существующий текстовый чат.
+*/
+
+body { overflow: hidden; }
+
+header {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+main {
+  grid-template-columns: 300px minmax(0, 1fr) 360px;
+}
+
+.event-console {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0b1220;
+  border-right: 1px solid #263244;
+}
+
+.event-console-title {
+  padding: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #263244;
+}
+
+#eventList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.event-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #263244;
+}
+
+.event-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.event-icon {
+  width: 22px;
+  flex: 0 0 22px;
+  text-align: center;
+}
+
+.event-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.event-time {
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.console-actions {
+  padding: 10px;
+  border-top: 1px solid #263244;
+}
+
+.console-actions button { width: 100%; }
+
+.center-column {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.video-area { position: relative; }
+
+#approvalOverlay {
+  position: absolute;
+  inset: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(5px);
+  border-radius: 14px;
+}
+
+#approvalOverlay.visible { display: flex; }
+
+.approval-card {
+  width: min(480px, 100%);
+  padding: 26px;
+  text-align: center;
+  background: #111827;
+  border: 1px solid #475569;
+  border-radius: 16px;
+  box-shadow: 0 28px 70px rgba(0,0,0,0.5);
+}
+
+.approval-card h2 { margin: 0 0 10px; }
+
+.approval-avatar {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #4f46e5;
+  font-size: 30px;
+}
+
+#requestGuestName {
+  margin-top: 14px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#requestGuestId {
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.approval-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+button.success { background: #15803d; }
+button.secondary { background: #475569; }
+
+.join-panel {
+  padding: 12px;
+  background: #111827;
+  border-top: 1px solid #263244;
+}
+
+.join-row {
+  max-width: 700px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+#nameInput {
+  min-width: 0;
+  padding: 11px 13px;
+  background: #0f172a;
+  color: white;
+  border: 1px solid #334155;
+  border-radius: 11px;
+  font: inherit;
+  outline: none;
+}
+
+#nameInput:focus { border-color: #2563eb; }
+#nameInput:disabled { opacity: 0.55; }
+
+#joinNote {
+  margin-top: 7px;
+  color: #94a3b8;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  main {
+    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 360px;
+  }
+  .chat-panel {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid #263244;
+  }
+}
+
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  header { grid-template-columns: 1fr; }
+  .header-left, .header-center, .header-right {
+    justify-content: center;
+    text-align: center;
+  }
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 260px minmax(420px, auto) 420px;
+  }
+  .event-console {
+    border-right: 0;
+    border-bottom: 1px solid #263244;
+  }
+  .chat-panel { grid-column: auto; }
+  .join-row { grid-template-columns: 1fr; }
+  .approval-buttons { flex-direction: column; }
+}
+
 </style>
 
 </head>
@@ -738,103 +971,61 @@ main {
   </div>
 
   <!--
-  Правая часть верхней панели:
-  выбор режимов и кнопки подключения.
+  По центру сверху находятся название комнаты
+  и кнопка Create room.
   -->
 
-  <div class="controls">
+  <div class="header-center">
 
-    <!--
-    Поле имени комнаты и кнопка генерации.
-    Имя можно изменить вручную до подключения.
-    -->
+    <input
+      id="roomInput"
+      class="room-input"
+      type="text"
+      maxlength="64"
+      data-i18n-placeholder="roomName"
+      placeholder="Room name"
+    />
 
-    <div class="room-controls">
+    <button
+      id="createRoomBtn"
+      class="create-room-btn"
+      type="button"
+      data-i18n="createRoom">
+      Create room
+    </button>
 
-      <input
-        id="roomInput"
-        class="room-input"
-        type="text"
-        maxlength="64"
-        data-i18n-placeholder="roomName"
-        placeholder="Room name"
-      />
+  </div>
 
-      <button
-        id="createRoomBtn"
-        class="create-room-btn"
-        type="button"
-        data-i18n="createRoom">
-        Create room
-      </button>
+  <!--
+  Справа остаются язык и галочки режимов.
+  Кнопка подключения перенесена вниз по центру.
+  -->
 
-    </div>
-
-    <!--
-    Переключатель языка интерфейса.
-    Выбранный язык сохраняется в localStorage.
-    -->
+  <div class="header-right">
 
     <div class="language-switch">
-      <button
-        id="ruBtn"
-        class="language-btn active"
-        type="button">
-        RU
-      </button>
-
-      <button
-        id="enBtn"
-        class="language-btn"
-        type="button">
-        EN
-      </button>
+      <button id="ruBtn" class="language-btn active" type="button">RU</button>
+      <button id="enBtn" class="language-btn" type="button">EN</button>
     </div>
-
-    <!--
-    Галочки можно менять до Join
-    и после подключения к комнате.
-    -->
 
     <div class="mode-options">
 
       <label class="mode-option">
-        <input
-          id="videoCheck"
-          type="checkbox"
-          checked
-        />
+        <input id="videoCheck" type="checkbox" checked />
         <span data-i18n="video">Video</span>
       </label>
 
       <label class="mode-option">
-        <input
-          id="audioCheck"
-          type="checkbox"
-          checked
-        />
+        <input id="audioCheck" type="checkbox" checked />
         <span data-i18n="audio">Audio</span>
       </label>
 
       <label class="mode-option">
-        <input
-          id="messagesCheck"
-          type="checkbox"
-          checked
-        />
+        <input id="messagesCheck" type="checkbox" checked />
         <span data-i18n="messages">Messages</span>
       </label>
 
     </div>
-
-    <button id="joinBtn" data-i18n="join">Join</button>
-
-    <button
-      id="leaveBtn"
-      class="danger"
-      disabled>
-      <span data-i18n="leave">Leave</span>
-    </button>
 
   </div>
 
@@ -871,26 +1062,92 @@ main {
 
 <main id="mainLayout">
 
-  <!-- Область видеокарточек участников. -->
+  <!--
+  Левая консоль событий:
+  кто вошёл, кто вышел, кто запросил вход,
+  кто отправил вложение.
+  -->
 
-  <section class="video-area">
+  <aside class="event-console">
 
-    <div id="videoGrid"
-         class="video-grid">
+    <div class="event-console-title" data-i18n="eventConsole">
+      Event console
+    </div>
 
-      <div id="videoPlaceholder"
-           class="video-placeholder">
-        <span data-i18n="joinRoom">Join the room</span>
+    <div id="eventList"></div>
+
+    <div class="console-actions">
+      <button
+        id="clearEventsBtn"
+        class="secondary"
+        type="button"
+        data-i18n="clearConsole">
+        Clear console
+      </button>
+    </div>
+
+  </aside>
+
+  <!--
+  Центральная колонка:
+  видеополя сверху, имя и подключение снизу.
+  -->
+
+  <section class="center-column">
+
+    <div class="video-area">
+
+      <div id="videoGrid" class="video-grid">
+        <div id="videoPlaceholder" class="video-placeholder">
+          <span data-i18n="joinRoom">Join the room</span>
+        </div>
+      </div>
+
+      <!--
+      Запрос на вход показывается поверх видео
+      только у создателя комнаты.
+      -->
+
+      <div id="approvalOverlay">
+        <div class="approval-card">
+          <div class="approval-avatar">👤</div>
+          <h2 data-i18n="joinRequest">Join request</h2>
+          <div data-i18n="userWantsToJoin">User wants to join this room</div>
+          <div id="requestGuestName"></div>
+          <div id="requestGuestId"></div>
+          <div class="approval-buttons">
+            <button id="approveBtn" class="success" type="button" data-i18n="approve">Approve</button>
+            <button id="rejectBtn" class="danger" type="button" data-i18n="reject">Reject</button>
+          </div>
+        </div>
       </div>
 
     </div>
 
-  </section>
+    <!--
+    Поле имени стоит рядом с кнопкой Подключиться.
+    -->
 
-  <!--
-  Панель текстового чата.
-  Она скрывается, если снять галочку Messages.
-  -->
+    <div class="join-panel">
+      <div class="join-row">
+        <input
+          id="nameInput"
+          type="text"
+          maxlength="40"
+          data-i18n-placeholder="yourName"
+          placeholder="Your name"
+        />
+        <button id="joinBtn" type="button" data-i18n="join">Join</button>
+        <button id="leaveBtn" class="danger" type="button" disabled>
+          <span data-i18n="leave">Leave</span>
+        </button>
+      </div>
+      <div id="joinNote" data-i18n="approvalRequired">
+        Entry requires creator approval
+      </div>
+    </div>
+
+  </section>
 
   <aside id="chatPanel"
          class="chat-panel">
@@ -935,6 +1192,7 @@ main {
 
   </aside>
 
+
 </main>
 
 <script type="module">
@@ -943,6 +1201,10 @@ import {
   Room,
   RoomEvent
 } from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.esm.mjs";
+
+import {
+  createClient
+} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 /*
 ========================================
@@ -972,6 +1234,20 @@ const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZub2RicGl3a2tyZGdxdm15YW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDk5MDAsImV4cCI6MjA4OTAyNTkwMH0.Gi4l3LAU3S4T77_2xgVWKmkeW34xblrJf04IlE4zu9I";
 
 /*
+SUPABASE_URL нужен только для Realtime Broadcast.
+Никакие таблицы и SQL в этой версии не используются.
+*/
+
+const SUPABASE_URL =
+  "https://fnodbpiwkkrdgqvmyanq.supabase.co";
+
+const supabase =
+  createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+/*
 Читаем параметры из адресной строки.
 
 Пример:
@@ -996,11 +1272,7 @@ let roomName =
 Если имя не передано, создаётся случайный identity.
 */
 
-const identity =
-  (params.get("name") || "").trim()
-  || "user-" + Math.floor(
-    Math.random() * 100000
-  );
+let identity = "";
 
 /*
 Тема DataChannel-сообщений.
@@ -1049,7 +1321,25 @@ const translations = {
     createRoom: "Создать комнату",
     copyLink: "Копировать ссылку",
     copied: "ссылка скопирована",
-    enterRoom: "введите название комнаты"
+    enterRoom: "введите название комнаты",
+    yourName: "Введите ваше имя",
+    enterName: "введите ваше имя",
+    eventConsole: "Консоль событий",
+    clearConsole: "Очистить консоль",
+    approvalRequired: "Вход только после одобрения создателем комнаты",
+    joinRequest: "Запрос на вход",
+    userWantsToJoin: "Пользователь хочет присоединиться к комнате",
+    approve: "Одобрить",
+    reject: "Отклонить",
+    requestSent: "запрос отправлен, ожидается решение создателя",
+    requestRejected: "создатель отклонил запрос",
+    creatorOffline: "создатель комнаты не отвечает",
+    creatorRoom: "комната создана, вы создатель",
+    userJoined: "зашёл в комнату",
+    userLeft: "вышел из комнаты",
+    requestedAccess: "запросил вход",
+    requestApproved: "доступ одобрен",
+    requestDenied: "доступ отклонён"
   },
 
   en: {
@@ -1079,7 +1369,25 @@ const translations = {
     createRoom: "Create room",
     copyLink: "Copy link",
     copied: "link copied",
-    enterRoom: "enter a room name"
+    enterRoom: "enter a room name",
+    yourName: "Enter your name",
+    enterName: "enter your name",
+    eventConsole: "Event console",
+    clearConsole: "Clear console",
+    approvalRequired: "Entry requires creator approval",
+    joinRequest: "Join request",
+    userWantsToJoin: "A user wants to join this room",
+    approve: "Approve",
+    reject: "Reject",
+    requestSent: "request sent, waiting for the creator",
+    requestRejected: "the creator rejected the request",
+    creatorOffline: "the room creator is not responding",
+    creatorRoom: "room created, you are the creator",
+    userJoined: "joined the room",
+    userLeft: "left the room",
+    requestedAccess: "requested access",
+    requestApproved: "access approved",
+    requestDenied: "access denied"
   }
 };
 
@@ -1152,6 +1460,7 @@ function applyLanguage() {
   updateParticipants();
   updateVideoLabels();
   updateConnectionStatus();
+
 }
 
 /*
@@ -1290,6 +1599,221 @@ const copyLinkBtn =
 
 /*
 ========================================
+ВРЕМЕННОЕ ОДОБРЕНИЕ ВХОДА
+========================================
+
+Заявки не сохраняются в таблице.
+Они передаются через Supabase Realtime Broadcast
+и существуют только пока страницы открыты.
+*/
+
+let browserId =
+  localStorage.getItem("vpnRoomBrowserId");
+
+if (!browserId) {
+  browserId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : "browser-" + Date.now() + "-" + Math.random();
+
+  localStorage.setItem(
+    "vpnRoomBrowserId",
+    browserId
+  );
+}
+
+let isCreator = false;
+let accessChannel = null;
+let currentJoinRequest = null;
+let pendingRequestId = null;
+let requestTimeout = null;
+
+const nameInput = document.getElementById("nameInput");
+const joinNote = document.getElementById("joinNote");
+const eventList = document.getElementById("eventList");
+const clearEventsBtn = document.getElementById("clearEventsBtn");
+const approvalOverlay = document.getElementById("approvalOverlay");
+const requestGuestName = document.getElementById("requestGuestName");
+const requestGuestId = document.getElementById("requestGuestId");
+const approveBtn = document.getElementById("approveBtn");
+const rejectBtn = document.getElementById("rejectBtn");
+
+function addEvent(type, text) {
+  const icons = {
+    joined: "🟢",
+    left: "🟠",
+    request: "👤",
+    approved: "✅",
+    rejected: "⛔",
+    system: "ℹ️"
+  };
+
+  const item = document.createElement("div");
+  item.className = "event-item";
+
+  const top = document.createElement("div");
+  top.className = "event-top";
+
+  const icon = document.createElement("div");
+  icon.className = "event-icon";
+  icon.textContent = icons[type] || "•";
+
+  const eventText = document.createElement("div");
+  eventText.className = "event-text";
+  eventText.textContent = text;
+
+  const time = document.createElement("div");
+  time.className = "event-time";
+  time.textContent = new Date().toLocaleTimeString(
+    currentLanguage === "ru" ? "ru-RU" : "en-US",
+    { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+  );
+
+  top.append(icon, eventText, time);
+  item.appendChild(top);
+  eventList.appendChild(item);
+  eventList.scrollTop = eventList.scrollHeight;
+}
+
+function restoreCreatorStatus() {
+  const savedCreator = localStorage.getItem(
+    "vpnRoomCreator:" + roomName
+  );
+  isCreator = Boolean(roomName) && savedCreator === browserId;
+}
+
+async function openAccessChannel() {
+  if (accessChannel) {
+    await supabase.removeChannel(accessChannel);
+    accessChannel = null;
+  }
+
+  if (!roomName) return;
+
+  accessChannel = supabase.channel("room-access-" + roomName);
+
+  accessChannel.on(
+    "broadcast",
+    { event: "join-request" },
+    ({ payload }) => {
+      if (!isCreator || payload.browserId === browserId) return;
+      currentJoinRequest = payload;
+      requestGuestName.textContent = payload.name;
+      requestGuestId.textContent = payload.browserId.slice(0, 18);
+      approvalOverlay.classList.add("visible");
+      addEvent("request", payload.name + " " + t("requestedAccess"));
+    }
+  );
+
+  accessChannel.on(
+    "broadcast",
+    { event: "join-response" },
+    ({ payload }) => {
+      if (payload.targetBrowserId !== browserId) return;
+      if (payload.requestId !== pendingRequestId) return;
+
+      if (requestTimeout) clearTimeout(requestTimeout);
+      requestTimeout = null;
+      pendingRequestId = null;
+
+      if (payload.approved) {
+        joinNote.textContent = t("connecting");
+        joinRoom();
+      } else {
+        joinBtn.disabled = false;
+        joinNote.textContent = t("requestRejected");
+      }
+    }
+  );
+
+  await accessChannel.subscribe();
+}
+
+async function answerJoinRequest(approved) {
+  if (!currentJoinRequest || !accessChannel) return;
+
+  const request = currentJoinRequest;
+
+  await accessChannel.send({
+    type: "broadcast",
+    event: "join-response",
+    payload: {
+      requestId: request.requestId,
+      targetBrowserId: request.browserId,
+      approved: approved
+    }
+  });
+
+  addEvent(
+    approved ? "approved" : "rejected",
+    request.name + " — " +
+      (approved ? t("requestApproved") : t("requestDenied"))
+  );
+
+  currentJoinRequest = null;
+  approvalOverlay.classList.remove("visible");
+}
+
+async function requestAccess() {
+  if (room) return;
+
+  identity = nameInput.value.trim();
+
+  if (!identity) {
+    joinNote.textContent = t("enterName");
+    nameInput.focus();
+    return;
+  }
+
+  localStorage.setItem("vpnRoomUserName", identity);
+
+  await applyRoomName(roomInput.value);
+
+  if (!roomName) {
+    statusBox.textContent = t("enterRoom");
+    roomInput.focus();
+    return;
+  }
+
+  restoreCreatorStatus();
+
+  if (isCreator) {
+    joinRoom();
+    return;
+  }
+
+  if (!accessChannel) await openAccessChannel();
+
+  joinBtn.disabled = true;
+  pendingRequestId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : "request-" + Date.now() + "-" + Math.random();
+
+  await accessChannel.send({
+    type: "broadcast",
+    event: "join-request",
+    payload: {
+      requestId: pendingRequestId,
+      browserId: browserId,
+      name: identity,
+      timestamp: Date.now()
+    }
+  });
+
+  joinNote.textContent = t("requestSent");
+
+  if (requestTimeout) clearTimeout(requestTimeout);
+
+  requestTimeout = setTimeout(() => {
+    if (!pendingRequestId) return;
+    pendingRequestId = null;
+    joinBtn.disabled = false;
+    joinNote.textContent = t("creatorOffline");
+  }, 15000);
+}
+
+
+/*
+========================================
 СОЗДАНИЕ И ПЕРЕИМЕНОВАНИЕ КОМНАТЫ
 ========================================
 */
@@ -1335,7 +1859,7 @@ function buildInviteLink(name) {
   return url.toString();
 }
 
-function applyRoomName(name) {
+async function applyRoomName(name) {
   roomName = normalizeRoomName(name);
   roomInput.value = roomName;
 
@@ -1354,21 +1878,30 @@ function applyRoomName(name) {
   history.replaceState(null, "", url);
   localStorage.setItem("vpnRoomLastRoom", roomName);
   updateConnectionStatus();
+  await openAccessChannel();
+  restoreCreatorStatus();
 }
 
-function createRoomName() {
+async function createRoomName() {
   if (isConnected) return;
-  applyRoomName(generateRoomName());
+  isCreator = true;
+  const createdName = generateRoomName();
+  await applyRoomName(createdName);
+  localStorage.setItem("vpnRoomCreator:" + roomName, browserId);
+  isCreator = true;
+  joinNote.textContent = t("creatorRoom");
+  addEvent("system", t("creatorRoom") + ": " + roomName);
   roomInput.focus();
   roomInput.select();
 }
 
-function handleRoomInputChange() {
+async function handleRoomInputChange() {
   if (isConnected) {
     roomInput.value = roomName;
     return;
   }
-  applyRoomName(roomInput.value);
+  isCreator = false;
+  await applyRoomName(roomInput.value);
 }
 
 async function copyInviteLink() {
@@ -1382,9 +1915,9 @@ async function copyInviteLink() {
   statusBox.textContent = t("copied");
 }
 
-function initializeRoomName() {
+async function initializeRoomName() {
   const savedRoom = localStorage.getItem("vpnRoomLastRoom") || "";
-  applyRoomName(roomName || savedRoom);
+  await applyRoomName(roomName || savedRoom);
 }
 
 /*
@@ -2269,6 +2802,14 @@ function applyMessagesState() {
 
 async function joinRoom() {
 
+  identity = nameInput.value.trim();
+
+  if (!identity) {
+    joinNote.textContent = t("enterName");
+    nameInput.focus();
+    return;
+  }
+
   /*
   Защита от повторного Join,
   если объект комнаты уже существует.
@@ -2277,7 +2818,7 @@ async function joinRoom() {
   if (room)
     return;
 
-  applyRoomName(roomInput.value);
+  await applyRoomName(roomInput.value);
 
   if (!roomName) {
     statusBox.textContent = t("enterRoom");
@@ -2415,7 +2956,10 @@ async function joinRoom() {
 
     room.on(
       RoomEvent.ParticipantConnected,
-      updateParticipants
+      participant => {
+        updateParticipants();
+        addEvent("joined", participant.identity + " " + t("userJoined"));
+      }
     );
 
     /*
@@ -2432,6 +2976,7 @@ async function joinRoom() {
         );
 
         updateParticipants();
+        addEvent("left", participant.identity + " " + t("userLeft"));
       }
     );
 
@@ -2461,6 +3006,7 @@ async function joinRoom() {
 
     roomInput.disabled = true;
     createRoomBtn.disabled = true;
+    nameInput.disabled = true;
 
     if (
       videoCheck.checked
@@ -2547,6 +3093,9 @@ async function joinRoom() {
     leaveBtn.disabled =
       false;
 
+    joinNote.textContent = t("connected");
+    addEvent("joined", identity + " " + t("userJoined"));
+
   } catch (error) {
 
     console.error(error);
@@ -2615,6 +3164,7 @@ function resetDisconnectedState() {
 
   roomInput.disabled = false;
   createRoomBtn.disabled = false;
+  nameInput.disabled = false;
 
   if (room) {
 
@@ -2681,13 +3231,39 @@ function resetDisconnectedState() {
 
 joinBtn.addEventListener(
   "click",
-  joinRoom
+  requestAccess
 );
 
 leaveBtn.addEventListener(
   "click",
   leaveRoom
 );
+
+approveBtn.addEventListener(
+  "click",
+  () => answerJoinRequest(true)
+);
+
+rejectBtn.addEventListener(
+  "click",
+  () => answerJoinRequest(false)
+);
+
+clearEventsBtn.addEventListener(
+  "click",
+  () => eventList.innerHTML = ""
+);
+
+nameInput.addEventListener(
+  "keydown",
+  event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      requestAccess();
+    }
+  }
+);
+
 
 videoCheck.addEventListener(
   "change",
@@ -2775,8 +3351,9 @@ copyLinkBtn.addEventListener(
 и выбранный язык сразу после загрузки модуля.
 */
 
+nameInput.value = localStorage.getItem("vpnRoomUserName") || "";
 applyMessagesState();
-initializeRoomName();
+await initializeRoomName();
 applyLanguage();
 
 </script>
@@ -2786,7 +3363,7 @@ applyLanguage();
 -->
 
 <div id="service-console">
-  create room | v1.3.1
+  realtime approval | v1.4.0
 </div>
 
 <div class="row" id="build-down">
@@ -2796,12 +3373,14 @@ applyLanguage();
 <script>
 
 /*
-Теперь Create room должна:
-
-сгенерировать имя вроде room-mabc123-x7k9pq;
-вставить его в поле Room;
-обновить URL;
-показать ссылку-приглашение.
+слева добавлена консоль событий;
+по центру остались видеополя;
+запрос на вход появляется поверх видео у создателя;
+поле имени и кнопка Подключиться находятся снизу по центру;
+Создать комнату находится сверху по центру;
+одобрение работает через Supabase Realtime Broadcast;
+никаких таблиц и никакого SQL не требуется;
+если создателя нет на странице, через 15 секунд выводится, что он не отвечает.
 */
 
 (function () {
