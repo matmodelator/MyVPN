@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>MVP Video Room</title>
+
+<!-- СТИЛЬ КОНСОЛИ -->
+<link rel="stylesheet"
+      href="styles/console.css" />
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0f172a;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  padding: 16px;
+  background: #111827;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 16px;
+}
+
+main {
+  padding: 12px;
+}
+
+/* ========================================
+   VIDEO GRID
+======================================== */
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.video-box {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+
+  min-height: 220px;
+  position: relative;
+
+  transition:
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+.video-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ========================================
+   SPEAKING INDICATOR
+======================================== */
+
+.video-box.speaking {
+  box-shadow:
+    0 0 0 3px #22c55e,
+    0 0 24px rgba(34,197,94,0.7);
+}
+
+.audio-meter {
+  position: absolute;
+
+  left: 10px;
+  right: 10px;
+  bottom: 38px;
+
+  height: 7px;
+
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.audio-meter-fill {
+  width: 0%;
+  height: 100%;
+
+  background: #22c55e;
+  border-radius: 999px;
+
+  transition: width 0.08s linear;
+}
+
+/* ========================================
+   LABEL
+======================================== */
+
+.label {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+
+  background: rgba(0,0,0,0.55);
+
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  font-size: 13px;
+}
+
+/* ========================================
+   CONTROLS
+======================================== */
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+/* ========================================
+   BUTTONS
+======================================== */
+
+button {
+  padding: 12px 18px;
+
+  border: 0;
+  border-radius: 14px;
+
+  background: #2563eb;
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
+
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.25);
+
+  position: relative;
+
+  overflow: hidden;
+}
+
+button:hover {
+  transform:
+    translateY(-2px)
+    scale(1.03);
+
+  filter: brightness(1.12);
+
+  box-shadow:
+    0 10px 24px rgba(37,99,235,0.35);
+}
+
+button:active {
+  transform:
+    translateY(2px)
+    scale(0.96);
+
+  filter: brightness(0.9);
+
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.35);
+}
+
+button.danger {
+  background: #dc2626;
+}
+
+button.danger:hover {
+  box-shadow:
+    0 10px 24px rgba(220,38,38,0.35);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div>MVP Video Room</div>
+    <div id="status">not connected</div>
+  </div>
+
+  <div class="controls">
+    <button id="joinBtn">Join</button>
+    <button id="leaveBtn" class="danger">Leave</button>
+  </div>
+</header>
+
+<main>
+  <div id="videoGrid" class="video-grid"></div>
+</main>
+
+<script type="module">
+
+import {
+  Room,
+  RoomEvent
+} from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.esm.mjs";
+
+/*
+========================================
+НАСТРОЙКИ
+========================================
+*/
+
+const LIVEKIT_URL =
+  "wss://mvp-81onftka.livekit.cloud";
+
+const SUPABASE_FUNCTION_URL =
+  "https://fnodbpiwkkrdgqvmyanq.supabase.co/functions/v1/livekit-token";
+
+/*
+ВАЖНО:
+anon key Supabase можно держать в браузере.
+LiveKit API_SECRET — нельзя!!!!!!!!!!!!!!!
+*/
+
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZub2RicGl3a2tyZGdxdm15YW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDk5MDAsImV4cCI6MjA4OTAyNTkwMH0.Gi4l3LAU3S4T77_2xgVWKmkeW34xblrJf04IlE4zu9I";
+
+const roomName =
+  new URLSearchParams(window.location.search).get("room") || "test-room";
+
+const identity =
+  "user-" + Math.floor(Math.random() * 100000);
+
+let room =
+  null;
+
+let audioMeterTimer =
+  null;
+
+/*
+Храним связь:
+identity участника → его карточка видео и индикатор звука
+*/
+
+const participantBoxes =
+  new Map();
+
+const videoGrid =
+  document.getElementById("videoGrid");
+
+const statusBox =
+  document.getElementById("status");
+
+const joinBtn =
+  document.getElementById("joinBtn");
+
+const leaveBtn =
+  document.getElementById("leaveBtn");
+
+/*
+========================================
+ПОЛУЧИТЬ LIVEKIT TOKEN
+========================================
+*/
+
+async function getLiveKitToken() {
+  const res =
+    await fetch(SUPABASE_FUNCTION_URL, {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY
+      },
+
+      body: JSON.stringify({
+        room: roomName,
+        identity: identity
+      })
+    });
+
+  const data =
+    await res.json();
+
+  if (!res.ok) {
+    console.error(
+      "TOKEN FUNCTION ERROR:",
+      data
+    );
+
+    throw new Error(
+      data.error ||
+      data.message ||
+      JSON.stringify(data)
+    );
+  }
+
+  return data.token;
+}
+
+/*
+========================================
+ДОБАВИТЬ ВИДЕО НА ЭКРАН
+========================================
+*/
+
+function addTrack(track, participantName) {
+  if (track.kind !== "video")
+    return;
+
+  /*
+  Если карточка этого участника уже есть —
+  второй раз не создаём.
+  */
+
+  if (participantBoxes.has(participantName))
+    return;
+
+  const box =
+    document.createElement("div");
+
+  box.className =
+    "video-box";
+
+  const element =
+    track.attach();
+
+  const label =
+    document.createElement("div");
+
+  label.className =
+    "label";
+
+  label.textContent =
+    participantName;
+
+  const meter =
+    document.createElement("div");
+
+  meter.className =
+    "audio-meter";
+
+  const meterFill =
+    document.createElement("div");
+
+  meterFill.className =
+    "audio-meter-fill";
+
+  meter.appendChild(meterFill);
+
+  box.appendChild(element);
+  box.appendChild(meter);
+  box.appendChild(label);
+
+  videoGrid.appendChild(box);
+
+  participantBoxes.set(
+    participantName,
+    {
+      box: box,
+      meterFill: meterFill
+    }
+  );
+}
+
+/*
+========================================
+ОБНОВИТЬ ИНДИКАТОРЫ ЗВУКА
+========================================
+*/
+
+function updateAudioIndicators() {
+  if (!room)
+    return;
+
+  participantBoxes.forEach((data, participantName) => {
+
+    let participant =
+      null;
+
+    if (participantName === identity) {
+      participant =
+        room.localParticipant;
+    } else {
+      participant =
+        room.getParticipantByIdentity(participantName);
+    }
+
+    if (!participant) {
+      data.box.classList.remove("speaking");
+      data.meterFill.style.width = "0%";
+      return;
+    }
+
+    const level =
+      Math.round(
+        (participant.audioLevel || 0) * 100
+      );
+
+    const isSpeaking =
+      participant.isSpeaking === true;
+
+    data.box.classList.toggle(
+      "speaking",
+      isSpeaking
+    );
+
+    data.meterFill.style.width =
+      isSpeaking
+        ? level + "%"
+        : "0%";
+  });
+}
+
+/*
+========================================
+ЗАПУСТИТЬ ОБНОВЛЕНИЕ УРОВНЯ ЗВУКА
+========================================
+*/
+
+function startAudioMeterTimer() {
+  stopAudioMeterTimer();
+
+  audioMeterTimer =
+    setInterval(
+      updateAudioIndicators,
+      120
+    );
+}
+
+/*
+========================================
+ОСТАНОВИТЬ ОБНОВЛЕНИЕ УРОВНЯ ЗВУКА
+========================================
+*/
+
+function stopAudioMeterTimer() {
+  if (audioMeterTimer) {
+    clearInterval(audioMeterTimer);
+    audioMeterTimer = null;
+  }
+}
+
+/*
+========================================
+ПОДКЛЮЧЕНИЕ К КОМНАТЕ
+========================================
+*/
+
+async function joinRoom() {
+  try {
+    statusBox.textContent =
+      "getting token...";
+
+    const token =
+      await getLiveKitToken();
+
+    room =
+      new Room();
+
+    /*
+    Когда приходит видео другого участника —
+    добавляем его карточку.
+    */
+
+    room.on(
+      RoomEvent.TrackSubscribed,
+      (track, publication, participant) => {
+        addTrack(
+          track,
+          participant.identity
+        );
+      }
+    );
+
+    /*
+    Когда LiveKit обновляет список говорящих —
+    сразу обновляем цветовую рамку.
+    */
+
+    room.on(
+      RoomEvent.ActiveSpeakersChanged,
+      () => {
+        updateAudioIndicators();
+      }
+    );
+
+    /*
+    Если участник вышел —
+    удаляем его карточку.
+    */
+
+    room.on(
+      RoomEvent.ParticipantDisconnected,
+      participant => {
+        const data =
+          participantBoxes.get(participant.identity);
+
+        if (data) {
+          data.box.remove();
+
+          participantBoxes.delete(
+            participant.identity
+          );
+        }
+      }
+    );
+
+    statusBox.textContent =
+      "connecting...";
+
+    await room.connect(
+      LIVEKIT_URL,
+      token
+    );
+
+    /*
+    На компьютере без камеры/микрофона это может упасть.
+    Поэтому не роняем всю комнату.
+    */
+
+    try {
+      await room.localParticipant
+        .enableCameraAndMicrophone();
+    } catch (deviceErr) {
+      console.warn(
+        "Camera/microphone not found:",
+        deviceErr
+      );
+    }
+
+    /*
+    Добавляем своё локальное видео.
+    Важно: используем identity, а не "me",
+    чтобы индикатор звука находил эту карточку.
+    */
+
+    room.localParticipant.videoTrackPublications
+      .forEach(publication => {
+
+        if (publication.track) {
+          addTrack(
+            publication.track,
+            identity
+          );
+        }
+
+      });
+
+    startAudioMeterTimer();
+
+    statusBox.textContent =
+      "connected: " + roomName;
+
+  } catch (err) {
+    console.error(err);
+
+    statusBox.textContent =
+      "error: " + err.message;
+  }
+}
+
+/*
+========================================
+ВЫХОД ИЗ КОМНАТЫ
+========================================
+*/
+
+function leaveRoom() {
+  stopAudioMeterTimer();
+
+  if (room) {
+    room.disconnect();
+    room = null;
+  }
+
+  participantBoxes.clear();
+
+  videoGrid.innerHTML =
+    "";
+
+  statusBox.textContent =
+    "disconnected";
+}
+
+joinBtn.addEventListener(
+  "click",
+  joinRoom
+);
+
+leaveBtn.addEventListener(
+  "click",
+  leaveRoom
+);
+
+</script>
+
+<!-- ========================================
+     SERVICE CONSOLE
+     Верхняя строка редактируется вручную
+     Здесь задается:
+     - название страницы
+     - номер версии
+======================================== -->
+
+<div id="service-console">
+
+  <div class="row" id="build-top">
+
+  from video-room (MVP)| v1.0.0
+
+  </div>
+
+  <div class="row" id="build-down">
+
+    deploy: --
+
+  </div>
+
+</div>
+
+<!-- ========================================
+     SCRIPT
+     Автоматически выводит:
+     - дату
+     - время
+     Момент загрузки страницы
+======================================== -->
+
+<script>
+
+(function () {
+
+  const now =
+    new Date();
+
+  const pad = n =>
+    String(n).padStart(2, '0');
+
+  const date =
+      pad(now.getDate())
+    + '.'
+    + pad(now.getMonth() + 1)
+    + '.'
+    + now.getFullYear();
+
+  const time =
+      pad(now.getHours())
+    + ':'
+    + pad(now.getMinutes());
+
+  document
+    .getElementById('build-down')
+    .textContent =
+      'deploy: '
+      + date
+      + ' '
+      + time;
+
+})();
+
+</script>
+
+</body>
+</html>
