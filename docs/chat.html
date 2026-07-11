@@ -5,17 +5,43 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>VPN Room</title>
+<title>VPN Chat</title>
 
 <style>
+
+/*
+========================================
+БАЗОВАЯ НАСТРОЙКА РАЗМЕРОВ
+========================================
+
+box-sizing: border-box заставляет браузер
+включать padding и border в указанную ширину
+и высоту элемента. Это упрощает расчёт размеров
+всей страницы.
+*/
+
 * {
   box-sizing: border-box;
 }
+
+/*
+Страница занимает всю высоту окна браузера.
+Это необходимо, чтобы основной блок мог
+растягиваться на всё доступное пространство.
+*/
 
 html,
 body {
   height: 100%;
 }
+
+/*
+body является главным вертикальным контейнером:
+
+1. header находится сверху;
+2. main занимает всё оставшееся место;
+3. сервисная консоль располагается снизу.
+*/
 
 body {
   margin: 0;
@@ -26,6 +52,22 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/*
+========================================
+ВЕРХНЯЯ ПАНЕЛЬ
+========================================
+
+В header находятся:
+
+- название комнаты;
+- текущий статус подключения;
+- галочки Video / Audio / Messages;
+- кнопки Join и Leave.
+
+flex-wrap позволяет элементам переноситься
+на следующую строку на узких экранах.
+*/
 
 header {
   padding: 14px 16px;
@@ -38,6 +80,12 @@ header {
   gap: 16px;
   flex-wrap: wrap;
 }
+
+/*
+Левая часть header с названием и статусом.
+min-width: 0 позволяет тексту корректно
+сжиматься внутри flex-контейнера.
+*/
 
 .header-left {
   min-width: 0;
@@ -54,6 +102,10 @@ header {
   font-size: 13px;
 }
 
+/*
+Правая часть header со всеми элементами управления.
+*/
+
 .controls {
   display: flex;
   align-items: center;
@@ -62,8 +114,59 @@ header {
 }
 
 /* ========================================
-   MODE CHECKBOXES
-======================================== */
+   ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
+========================================
+
+Две кнопки RU / EN меняют только надписи
+интерфейса. Работа LiveKit от языка не зависит.
+*/
+
+.language-switch {
+  display: flex;
+  overflow: hidden;
+
+  background: #1e293b;
+  border-radius: 12px;
+}
+
+.language-btn {
+  padding: 9px 12px;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+  color: #cbd5e1;
+
+  box-shadow: none;
+}
+
+.language-btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.language-btn.active {
+  background: #2563eb;
+  color: white;
+}
+
+/* ========================================
+   ГАЛОЧКИ РЕЖИМОВ
+========================================
+
+Video:
+включает или выключает локальную камеру.
+
+Audio:
+включает или выключает локальный микрофон.
+
+Messages:
+показывает или скрывает панель чата.
+
+Все три галочки доступны как до подключения,
+так и во время уже активного соединения.
+*/
 
 .mode-options {
   display: flex;
@@ -94,8 +197,12 @@ header {
 }
 
 /* ========================================
-   BUTTONS
-======================================== */
+   КНОПКИ
+========================================
+
+Общий стиль используется для Join, Leave и Send.
+Кнопка Leave дополнительно получает класс danger.
+*/
 
 button {
   padding: 11px 16px;
@@ -151,8 +258,17 @@ button:disabled {
 }
 
 /* ========================================
-   MAIN LAYOUT
-======================================== */
+   ОСНОВНОЙ МАКЕТ
+========================================
+
+main разделён на две колонки:
+
+1. левая часть — видео;
+2. правая часть — чат шириной 360 px.
+
+minmax(0, 1fr) позволяет видеоколонке
+занимать всё оставшееся место и корректно сжиматься.
+*/
 
 main {
   flex: 1;
@@ -171,14 +287,28 @@ main {
 }
 
 /* ========================================
-   VIDEO GRID
-======================================== */
+   СЕТКА ВИДЕО
+========================================
+
+Карточки автоматически располагаются в несколько
+колонок. Минимальная ширина одной карточки — 280 px.
+*/
 
 .video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
 }
+
+/*
+Одна карточка участника.
+
+Внутри неё находятся:
+
+- элемент <video>;
+- индикатор уровня звука;
+- имя участника.
+*/
 
 .video-box {
   background: #1e293b;
@@ -201,11 +331,20 @@ main {
   object-fit: cover;
 }
 
+/*
+Класс speaking добавляется участнику,
+который в данный момент говорит.
+*/
+
 .video-box.speaking {
   box-shadow:
     0 0 0 3px #22c55e,
     0 0 24px rgba(34,197,94,0.7);
 }
+
+/*
+Фоновая полоса индикатора громкости.
+*/
 
 .audio-meter {
   position: absolute;
@@ -221,6 +360,11 @@ main {
   overflow: hidden;
 }
 
+/*
+Заполняемая зелёная часть индикатора.
+Её ширина меняется JavaScript-кодом.
+*/
+
 .audio-meter-fill {
   width: 0%;
   height: 100%;
@@ -230,6 +374,10 @@ main {
 
   transition: width 0.08s linear;
 }
+
+/*
+Подпись с identity участника.
+*/
 
 .label {
   position: absolute;
@@ -243,6 +391,13 @@ main {
 
   font-size: 13px;
 }
+
+/*
+Заглушка, которая выводится, когда:
+
+- пользователь ещё не подключён;
+- ни у кого нет активного видеотрека.
+*/
 
 .video-placeholder {
   min-height: 220px;
@@ -258,8 +413,17 @@ main {
 }
 
 /* ========================================
-   CHAT
-======================================== */
+   ЧАТ
+========================================
+
+Панель содержит:
+
+- заголовок;
+- список участников;
+- историю сообщений;
+- поле ввода;
+- кнопку Send.
+*/
 
 .chat-panel {
   min-width: 0;
@@ -271,6 +435,11 @@ main {
   background: #111827;
   border-left: 1px solid #263244;
 }
+
+/*
+Класс hidden устанавливается,
+когда снята галочка Messages.
+*/
 
 .chat-panel.hidden {
   display: none;
@@ -285,6 +454,10 @@ main {
 .chat-title {
   font-weight: 700;
 }
+
+/*
+Горизонтальный список участников комнаты.
+*/
 
 .participants {
   margin-top: 8px;
@@ -310,6 +483,10 @@ main {
   background: #1d4ed8;
 }
 
+/*
+Прокручиваемая область истории сообщений.
+*/
+
 #messages {
   flex: 1;
   min-height: 0;
@@ -329,6 +506,10 @@ main {
   text-align: center;
 }
 
+/*
+Сообщение другого участника располагается слева.
+*/
+
 .message {
   max-width: 88%;
 
@@ -339,6 +520,11 @@ main {
   background: #1e293b;
   border-radius: 12px;
 }
+
+/*
+Собственное сообщение располагается справа
+и выделяется синим цветом.
+*/
 
 .message.own {
   align-self: flex-end;
@@ -369,6 +555,13 @@ main {
   font-size: 14px;
   line-height: 1.4;
 }
+
+/*
+Нижняя строка чата:
+
+- textarea занимает оставшуюся ширину;
+- кнопка Send располагается справа.
+*/
 
 .composer {
   padding: 10px;
@@ -408,8 +601,12 @@ main {
 }
 
 /* ========================================
-   SERVICE CONSOLE
-======================================== */
+   СЕРВИСНАЯ КОНСОЛЬ
+========================================
+
+Нижние строки показывают номер версии
+и время загрузки страницы.
+*/
 
 #service-console,
 #build-down {
@@ -466,12 +663,48 @@ main {
 
 <header>
 
+  <!--
+  Левая часть верхней панели:
+  название приложения и статус соединения.
+  -->
+
   <div class="header-left">
-    <div class="title">VPN Room</div>
+    <div class="title" data-i18n="title">VPN Room</div>
     <div id="status">not connected</div>
   </div>
 
+  <!--
+  Правая часть верхней панели:
+  выбор режимов и кнопки подключения.
+  -->
+
   <div class="controls">
+
+    <!--
+    Переключатель языка интерфейса.
+    Выбранный язык сохраняется в localStorage.
+    -->
+
+    <div class="language-switch">
+      <button
+        id="ruBtn"
+        class="language-btn active"
+        type="button">
+        RU
+      </button>
+
+      <button
+        id="enBtn"
+        class="language-btn"
+        type="button">
+        EN
+      </button>
+    </div>
+
+    <!--
+    Галочки можно менять до Join
+    и после подключения к комнате.
+    -->
 
     <div class="mode-options">
 
@@ -481,7 +714,7 @@ main {
           type="checkbox"
           checked
         />
-        Video
+        <span data-i18n="video">Video</span>
       </label>
 
       <label class="mode-option">
@@ -490,7 +723,7 @@ main {
           type="checkbox"
           checked
         />
-        Audio
+        <span data-i18n="audio">Audio</span>
       </label>
 
       <label class="mode-option">
@@ -499,25 +732,32 @@ main {
           type="checkbox"
           checked
         />
-        Messages
+        <span data-i18n="messages">Messages</span>
       </label>
 
     </div>
 
-    <button id="joinBtn">Join</button>
+    <button id="joinBtn" data-i18n="join">Join</button>
 
     <button
       id="leaveBtn"
       class="danger"
       disabled>
-      Leave
+      <span data-i18n="leave">Leave</span>
     </button>
 
   </div>
 
 </header>
 
+<!--
+Основная область приложения.
+Слева находится видео, справа чат.
+-->
+
 <main id="mainLayout">
+
+  <!-- Область видеокарточек участников. -->
 
   <section class="video-area">
 
@@ -526,19 +766,24 @@ main {
 
       <div id="videoPlaceholder"
            class="video-placeholder">
-        Join the room
+        <span data-i18n="joinRoom">Join the room</span>
       </div>
 
     </div>
 
   </section>
 
+  <!--
+  Панель текстового чата.
+  Она скрывается, если снять галочку Messages.
+  -->
+
   <aside id="chatPanel"
          class="chat-panel">
 
     <div class="chat-header">
 
-      <div class="chat-title">
+      <div class="chat-title" data-i18n="chat">
         Chat
       </div>
 
@@ -552,7 +797,7 @@ main {
 
       <div id="emptyMessage"
            class="empty-message">
-        Join the room to start chatting
+        <span data-i18n="joinChat">Join the room to start chatting</span>
       </div>
 
     </div>
@@ -561,6 +806,7 @@ main {
 
       <textarea
         id="messageInput"
+        data-i18n-placeholder="writeMessage"
         placeholder="Write a message..."
         disabled>
       </textarea>
@@ -568,7 +814,7 @@ main {
       <button
         id="sendBtn"
         disabled>
-        Send
+        <span data-i18n="send">Send</span>
       </button>
 
     </div>
@@ -586,8 +832,20 @@ import {
 
 /*
 ========================================
-НАСТРОЙКИ
+НАСТРОЙКИ ПОДКЛЮЧЕНИЯ
 ========================================
+
+LIVEKIT_URL:
+WebSocket-адрес проекта LiveKit Cloud.
+
+SUPABASE_FUNCTION_URL:
+адрес Supabase Edge Function, которая создаёт
+LiveKit access token.
+
+SUPABASE_ANON_KEY:
+публичный ключ Supabase. Его допустимо хранить
+в браузерном JavaScript. LiveKit API_SECRET
+в этот файл помещать нельзя.
 */
 
 const LIVEKIT_URL =
@@ -599,13 +857,30 @@ const SUPABASE_FUNCTION_URL =
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZub2RicGl3a2tyZGdxdm15YW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDk5MDAsImV4cCI6MjA4OTAyNTkwMH0.Gi4l3LAU3S4T77_2xgVWKmkeW34xblrJf04IlE4zu9I";
 
+/*
+Читаем параметры из адресной строки.
+
+Пример:
+chat.html?room=family&name=Igor
+*/
+
 const params =
   new URLSearchParams(
     window.location.search
   );
 
+/*
+Имя комнаты берётся из параметра room.
+Если параметра нет, используется test-room.
+*/
+
 const roomName =
   params.get("room") || "test-room";
+
+/*
+Имя участника берётся из параметра name.
+Если имя не передано, создаётся случайный identity.
+*/
 
 const identity =
   (params.get("name") || "").trim()
@@ -613,25 +888,211 @@ const identity =
     Math.random() * 100000
   );
 
+/*
+Тема DataChannel-сообщений.
+Она позволяет отличать чат от других
+типов данных, которые могут появиться позже.
+*/
+
 const CHAT_TOPIC =
   "room-chat";
+
+/*
+========================================
+ДВУЯЗЫЧНЫЙ ИНТЕРФЕЙС RU / EN
+========================================
+
+Словарь содержит все надписи интерфейса
+и динамические статусы подключения.
+*/
+
+const translations = {
+
+  ru: {
+    title: "VPN-комната",
+    video: "Видео",
+    audio: "Аудио",
+    messages: "Сообщения",
+    join: "Подключиться",
+    leave: "Выйти",
+    chat: "Чат",
+    send: "Отправить",
+    writeMessage: "Введите сообщение...",
+    joinRoom: "Подключитесь к комнате",
+    noVideo: "Нет активного видео",
+    joinChat: "Подключитесь к комнате, чтобы начать переписку",
+    notConnected: "не подключено",
+    disconnected: "отключено",
+    gettingToken: "получение токена...",
+    connecting: "подключение...",
+    connected: "подключено",
+    you: "вы",
+    unknown: "неизвестно",
+    videoError: "ошибка видео",
+    audioError: "ошибка аудио",
+    connectionError: "ошибка подключения"
+  },
+
+  en: {
+    title: "VPN Room",
+    video: "Video",
+    audio: "Audio",
+    messages: "Messages",
+    join: "Join",
+    leave: "Leave",
+    chat: "Chat",
+    send: "Send",
+    writeMessage: "Write a message...",
+    joinRoom: "Join the room",
+    noVideo: "No active video",
+    joinChat: "Join the room to start chatting",
+    notConnected: "not connected",
+    disconnected: t("disconnected"),
+    gettingToken: t("gettingToken"),
+    connecting: t("connecting"),
+    connected: "connected",
+    you: "you",
+    unknown: "unknown",
+    videoError: "video error",
+    audioError: "audio error",
+    connectionError: "connection error"
+  }
+};
+
+/*
+Берём сохранённый язык.
+Если пользователь ещё не выбирал язык,
+используем русский.
+*/
+
+let currentLanguage =
+  localStorage.getItem("vpnRoomLanguage")
+  || "ru";
+
+/*
+Возвращает перевод по ключу.
+*/
+
+function t(key) {
+
+  return translations[currentLanguage][key]
+    || key;
+}
+
+/*
+Обновляет все статические надписи страницы.
+*/
+
+function applyLanguage() {
+
+  document.documentElement.lang =
+    currentLanguage;
+
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach(element => {
+
+      const key =
+        element.dataset.i18n;
+
+      element.textContent =
+        t(key);
+    });
+
+  document
+    .querySelectorAll("[data-i18n-placeholder]")
+    .forEach(element => {
+
+      const key =
+        element.dataset.i18nPlaceholder;
+
+      element.placeholder =
+        t(key);
+    });
+
+  ruBtn.classList.toggle(
+    "active",
+    currentLanguage === "ru"
+  );
+
+  enBtn.classList.toggle(
+    "active",
+    currentLanguage === "en"
+  );
+
+  /*
+  Переводим динамические подписи участников
+  и текущий статус соединения.
+  */
+
+  updateParticipants();
+  updateVideoLabels();
+  updateConnectionStatus();
+}
+
+/*
+Меняет язык и сохраняет выбор.
+*/
+
+function setLanguage(language) {
+
+  currentLanguage =
+    language;
+
+  localStorage.setItem(
+    "vpnRoomLanguage",
+    language
+  );
+
+  applyLanguage();
+}
+
+/*
+Текущий объект LiveKit Room.
+До подключения равен null.
+*/
 
 let room =
   null;
 
+/*
+ID таймера, который обновляет полосы громкости.
+*/
+
 let audioMeterTimer =
   null;
 
+/*
+Отдельный флаг состояния соединения.
+Он используется для включения и выключения
+поля ввода сообщений.
+*/
+
 let isConnected =
   false;
+
+/*
+Map связывает identity участника
+с его видеокарточкой и видеотреком.
+
+Структура значения:
+{
+  box,
+  meterFill,
+  track
+}
+*/
 
 const participantBoxes =
   new Map();
 
 /*
 ========================================
-DOM
+ССЫЛКИ НА DOM-ЭЛЕМЕНТЫ
 ========================================
+
+Все часто используемые элементы страницы
+сохраняются в константах один раз.
 */
 
 const statusBox =
@@ -681,13 +1142,85 @@ const messagesCheck =
     "messagesCheck"
   );
 
+const ruBtn =
+  document.getElementById("ruBtn");
+
+const enBtn =
+  document.getElementById("enBtn");
+
+
 /*
 ========================================
-TOKEN
+ДИНАМИЧЕСКИЕ ПОДПИСИ
 ========================================
 */
 
+/*
+Переводит текущий статус соединения.
+*/
+
+function updateConnectionStatus() {
+
+  if (isConnected) {
+
+    statusBox.textContent =
+      t("connected")
+      + ": "
+      + roomName
+      + " | "
+      + identity;
+
+  } else {
+
+    statusBox.textContent =
+      t("notConnected");
+  }
+}
+
+/*
+Обновляет подписи уже созданных видеокарточек.
+*/
+
+function updateVideoLabels() {
+
+  participantBoxes.forEach(
+    (data, participantName) => {
+
+      const label =
+        data.box.querySelector(".label");
+
+      if (!label)
+        return;
+
+      label.textContent =
+        participantName === identity
+          ? participantName
+            + " ("
+            + t("you")
+            + ")"
+          : participantName;
+    }
+  );
+}
+
+/*
+========================================
+ПОЛУЧЕНИЕ LIVEKIT TOKEN
+========================================
+
+Браузер отправляет имя комнаты и identity
+в Supabase Edge Function.
+
+Edge Function подписывает LiveKit token
+секретным ключом на сервере и возвращает
+готовый token браузеру.
+*/
+
 async function getLiveKitToken() {
+
+  /*
+  Отправляем POST-запрос в Supabase.
+  */
 
   const response =
     await fetch(
@@ -714,8 +1247,17 @@ async function getLiveKitToken() {
       }
     );
 
+  /*
+  Читаем JSON-ответ Edge Function.
+  */
+
   const data =
     await response.json();
+
+  /*
+  Любой HTTP-ответ вне диапазона 200–299
+  считаем ошибкой и прекращаем подключение.
+  */
 
   if (!response.ok) {
 
@@ -736,8 +1278,12 @@ async function getLiveKitToken() {
 
 /*
 ========================================
-ВИДЕО-КАРТОЧКИ
+РАБОТА С ВИДЕОКАРТОЧКАМИ
 ========================================
+*/
+
+/*
+Удаляет текстовую заглушку перед добавлением видео.
 */
 
 function removePlaceholder() {
@@ -751,6 +1297,11 @@ function removePlaceholder() {
     placeholder.remove();
   }
 }
+
+/*
+Создаёт заглушку, если видеокарточек нет.
+Повторно существующую заглушку не создаёт.
+*/
 
 function showPlaceholder(text) {
 
@@ -780,13 +1331,31 @@ function showPlaceholder(text) {
   );
 }
 
+/*
+Добавляет видеотрек участника на страницу.
+
+track:
+LiveKit-видеотрек.
+
+participantName:
+identity владельца трека.
+*/
+
 function addTrack(
   track,
   participantName
 ) {
 
+  /*
+  Аудиотреки эта функция не обрабатывает.
+  */
+
   if (track.kind !== "video")
     return;
+
+  /*
+  Не создаём вторую карточку для того же участника.
+  */
 
   if (
     participantBoxes.has(
@@ -804,6 +1373,11 @@ function addTrack(
   box.className =
     "video-box";
 
+  /*
+  track.attach() создаёт HTML-элемент <video>
+  и связывает его с LiveKit-треком.
+  */
+
   const element =
     track.attach();
 
@@ -815,7 +1389,7 @@ function addTrack(
 
   label.textContent =
     participantName === identity
-      ? participantName + " (you)"
+      ? participantName + " (" + t("you") + ")"
       : participantName;
 
   const meter =
@@ -860,6 +1434,11 @@ function addTrack(
   );
 }
 
+/*
+Удаляет видеокарточку участника,
+отсоединяет видеотрек от DOM и очищает Map.
+*/
+
 function removeParticipantVideo(
   participantName
 ) {
@@ -889,16 +1468,26 @@ function removeParticipantVideo(
   ) {
     showPlaceholder(
       isConnected
-        ? "No active video"
-        : "Join the room"
+        ? t("noVideo")
+        : t("joinRoom")
     );
   }
 }
 
 /*
 ========================================
-ИНДИКАТОРЫ ЗВУКА
+ИНДИКАТОРЫ УРОВНЯ ЗВУКА
 ========================================
+
+LiveKit предоставляет:
+
+participant.audioLevel — уровень громкости;
+participant.isSpeaking — говорит ли участник.
+*/
+
+/*
+Обходит все существующие видеокарточки
+и обновляет зелёную рамку и полосу громкости.
 */
 
 function updateAudioIndicators() {
@@ -958,6 +1547,11 @@ function updateAudioIndicators() {
   );
 }
 
+/*
+Запускает обновление индикаторов каждые 120 мс.
+Перед запуском старый таймер останавливается.
+*/
+
 function startAudioMeterTimer() {
 
   stopAudioMeterTimer();
@@ -968,6 +1562,10 @@ function startAudioMeterTimer() {
       120
     );
 }
+
+/*
+Останавливает таймер обновления индикаторов.
+*/
 
 function stopAudioMeterTimer() {
 
@@ -984,8 +1582,15 @@ function stopAudioMeterTimer() {
 
 /*
 ========================================
-УЧАСТНИКИ
+СПИСОК УЧАСТНИКОВ
 ========================================
+*/
+
+/*
+Полностью перерисовывает список участников:
+
+1. добавляет локального пользователя;
+2. добавляет всех удалённых участников.
 */
 
 function updateParticipants() {
@@ -1012,6 +1617,13 @@ function updateParticipants() {
   );
 }
 
+/*
+Добавляет одного участника в панель чата.
+
+own = true:
+это локальный пользователь, к имени добавляется "(you)".
+*/
+
 function addParticipantItem(
   participantName,
   own
@@ -1027,7 +1639,7 @@ function addParticipantItem(
 
   item.textContent =
     own
-      ? participantName + " (you)"
+      ? participantName + " (" + t("you") + ")"
       : participantName;
 
   participantsBox.appendChild(
@@ -1037,8 +1649,24 @@ function addParticipantItem(
 
 /*
 ========================================
-CHAT
+ТЕКСТОВЫЙ ЧАТ
 ========================================
+
+Сообщения передаются через LiveKit DataChannel.
+Отдельный сервер чата в этой версии не используется.
+*/
+
+/*
+Добавляет одно сообщение в историю.
+
+message содержит:
+{
+  sender,
+  text,
+  timestamp
+}
+
+own показывает, является ли сообщение собственным.
 */
 
 function addMessage(
@@ -1077,7 +1705,7 @@ function addMessage(
 
   name.textContent =
     own
-      ? message.sender + " (you)"
+      ? message.sender + " (" + t("you") + ")"
       : message.sender;
 
   const time =
@@ -1090,7 +1718,9 @@ function addMessage(
     new Date(
       message.timestamp
     ).toLocaleTimeString(
-      [],
+      currentLanguage === "ru"
+        ? "ru-RU"
+        : "en-US",
       {
         hour: "2-digit",
         minute: "2-digit"
@@ -1102,6 +1732,11 @@ function addMessage(
 
   text.className =
     "message-text";
+
+  /*
+  Используется textContent, а не innerHTML.
+  Это защищает от вставки HTML и скриптов.
+  */
 
   text.textContent =
     message.text;
@@ -1130,6 +1765,10 @@ function addMessage(
     messagesBox.scrollHeight;
 }
 
+/*
+Отправляет сообщение всем участникам комнаты.
+*/
+
 async function sendMessage() {
 
   if (
@@ -1152,6 +1791,12 @@ async function sendMessage() {
     timestamp: Date.now()
   };
 
+  /*
+  DataChannel передаёт Uint8Array,
+  поэтому объект сначала превращается в JSON,
+  затем кодируется в байты.
+  */
+
   const bytes =
     new TextEncoder().encode(
       JSON.stringify(message)
@@ -1166,6 +1811,11 @@ async function sendMessage() {
       }
     );
 
+  /*
+  LiveKit не возвращает собственное сообщение
+  отправителю, поэтому добавляем его локально.
+  */
+
   addMessage(
     message,
     true
@@ -1177,12 +1827,21 @@ async function sendMessage() {
   messageInput.focus();
 }
 
+/*
+Обрабатывает сообщение DataChannel,
+пришедшее от другого участника.
+*/
+
 function handleDataReceived(
   payload,
   participant,
   kind,
   topic
 ) {
+
+  /*
+  Игнорируем сообщения с другой темой.
+  */
 
   if (
     topic &&
@@ -1213,7 +1872,7 @@ function handleDataReceived(
         sender:
           data.sender ||
           participant?.identity ||
-          "unknown",
+          t("unknown"),
 
         text:
           String(
@@ -1239,11 +1898,16 @@ function handleDataReceived(
 
 /*
 ========================================
-ПЕРЕКЛЮЧЕНИЕ VIDEO
+ВКЛЮЧЕНИЕ И ВЫКЛЮЧЕНИЕ КАМЕРЫ
 ========================================
 */
 
 async function applyVideoState() {
+
+  /*
+  До подключения галочка только сохраняет выбор.
+  Реальное включение камеры произойдёт после Join.
+  */
 
   if (!room)
     return;
@@ -1254,6 +1918,11 @@ async function applyVideoState() {
       .setCameraEnabled(
         videoCheck.checked
       );
+
+    /*
+    Камера включается только тогда,
+    когда установлена галочка Video.
+    */
 
     if (
       videoCheck.checked
@@ -1285,7 +1954,7 @@ async function applyVideoState() {
     console.error(error);
 
     statusBox.textContent =
-      "video error: "
+      t("videoError") + ": "
       + error.message;
 
     videoCheck.checked =
@@ -1295,11 +1964,15 @@ async function applyVideoState() {
 
 /*
 ========================================
-ПЕРЕКЛЮЧЕНИЕ AUDIO
+ВКЛЮЧЕНИЕ И ВЫКЛЮЧЕНИЕ МИКРОФОНА
 ========================================
 */
 
 async function applyAudioState() {
+
+  /*
+  До подключения галочка только сохраняет выбор.
+  */
 
   if (!room)
     return;
@@ -1316,7 +1989,7 @@ async function applyAudioState() {
     console.error(error);
 
     statusBox.textContent =
-      "audio error: "
+      t("audioError") + ": "
       + error.message;
 
     audioCheck.checked =
@@ -1326,8 +1999,16 @@ async function applyAudioState() {
 
 /*
 ========================================
-ПЕРЕКЛЮЧЕНИЕ MESSAGES
+ПОКАЗ И СКРЫТИЕ ЧАТА
 ========================================
+*/
+
+/*
+Если Messages выключен:
+
+- панель чата скрывается;
+- поле ввода блокируется;
+- кнопка Send блокируется.
 */
 
 function applyMessagesState() {
@@ -1351,11 +2032,16 @@ function applyMessagesState() {
 
 /*
 ========================================
-ПОДКЛЮЧЕНИЕ
+ПОДКЛЮЧЕНИЕ К LIVEKIT-КОМНАТЕ
 ========================================
 */
 
 async function joinRoom() {
+
+  /*
+  Защита от повторного Join,
+  если объект комнаты уже существует.
+  */
 
   if (room)
     return;
@@ -1366,13 +2052,23 @@ async function joinRoom() {
       true;
 
     statusBox.textContent =
-      "getting token...";
+      t("gettingToken");
 
     const token =
       await getLiveKitToken();
 
+    /*
+    Создаём локальный объект комнаты
+    и ниже подписываемся на её события.
+    */
+
     room =
       new Room();
+
+    /*
+    TrackSubscribed вызывается,
+    когда браузер получил удалённый трек.
+    */
 
     room.on(
       RoomEvent.TrackSubscribed,
@@ -1381,6 +2077,10 @@ async function joinRoom() {
         publication,
         participant
       ) => {
+
+        /*
+        Удалённое видео добавляем в видеосетку.
+        */
 
         if (
           track.kind === "video"
@@ -1394,6 +2094,12 @@ async function joinRoom() {
         /*
         Для удалённого аудио обязательно
         прикрепляем track к audio-элементу.
+        */
+
+        /*
+        Для удалённого аудио создаём скрытый
+        HTML-элемент <audio>. Без attach()
+        звук другого участника не будет слышен.
         */
 
         if (
@@ -1412,6 +2118,12 @@ async function joinRoom() {
         }
       }
     );
+
+    /*
+    TrackUnsubscribed вызывается,
+    когда удалённый участник выключил трек
+    или браузер перестал его получать.
+    */
 
     room.on(
       RoomEvent.TrackUnsubscribed,
@@ -1440,20 +2152,37 @@ async function joinRoom() {
       }
     );
 
+    /*
+    LiveKit сообщает об изменении списка говорящих.
+    */
+
     room.on(
       RoomEvent.ActiveSpeakersChanged,
       updateAudioIndicators
     );
+
+    /*
+    Получение сообщений чата.
+    */
 
     room.on(
       RoomEvent.DataReceived,
       handleDataReceived
     );
 
+    /*
+    Новый участник вошёл в комнату.
+    */
+
     room.on(
       RoomEvent.ParticipantConnected,
       updateParticipants
     );
+
+    /*
+    Участник вышел: удаляем его видео
+    и обновляем список участников.
+    */
 
     room.on(
       RoomEvent.ParticipantDisconnected,
@@ -1467,13 +2196,21 @@ async function joinRoom() {
       }
     );
 
+    /*
+    Соединение с комнатой завершилось.
+    */
+
     room.on(
       RoomEvent.Disconnected,
       resetDisconnectedState
     );
 
     statusBox.textContent =
-      "connecting...";
+      t("connecting");
+
+    /*
+    Фактическое подключение к LiveKit Cloud.
+    */
 
     await room.connect(
       LIVEKIT_URL,
@@ -1504,6 +2241,11 @@ async function joinRoom() {
       }
     }
 
+    /*
+    Микрофон включается только тогда,
+    когда установлена галочка Audio.
+    */
+
     if (
       audioCheck.checked
     ) {
@@ -1527,6 +2269,11 @@ async function joinRoom() {
       }
     }
 
+    /*
+    После включения камеры добавляем
+    собственный локальный видеотрек на страницу.
+    */
+
     room.localParticipant
       .videoTrackPublications
       .forEach(publication => {
@@ -1549,7 +2296,8 @@ async function joinRoom() {
     applyMessagesState();
 
     statusBox.textContent =
-      "connected: "
+      t("connected")
+      + ": "
       + roomName
       + " | "
       + identity;
@@ -1562,7 +2310,8 @@ async function joinRoom() {
     console.error(error);
 
     statusBox.textContent =
-      "error: "
+      t("connectionError")
+      + ": "
       + error.message;
 
     if (room) {
@@ -1585,8 +2334,14 @@ async function joinRoom() {
 
 /*
 ========================================
-ВЫХОД
+ВЫХОД ИЗ КОМНАТЫ
 ========================================
+*/
+
+/*
+Запускает отключение от LiveKit.
+После room.disconnect() также сработает
+событие RoomEvent.Disconnected.
 */
 
 function leaveRoom() {
@@ -1597,6 +2352,17 @@ function leaveRoom() {
 
   resetDisconnectedState();
 }
+
+/*
+Возвращает страницу в исходное состояние:
+
+- останавливает таймеры;
+- останавливает локальные треки;
+- очищает видеокарточки;
+- очищает список участников;
+- блокирует чат;
+- снова включает Join.
+*/
 
 function resetDisconnectedState() {
 
@@ -1647,7 +2413,7 @@ function resetDisconnectedState() {
     "";
 
   showPlaceholder(
-    "Join the room"
+    t("joinRoom")
   );
 
   joinBtn.disabled =
@@ -1657,14 +2423,14 @@ function resetDisconnectedState() {
     true;
 
   statusBox.textContent =
-    "disconnected";
+    t("disconnected");
 
   applyMessagesState();
 }
 
 /*
 ========================================
-СОБЫТИЯ
+ОБРАБОТЧИКИ ЭЛЕМЕНТОВ ИНТЕРФЕЙСА
 ========================================
 */
 
@@ -1698,6 +2464,11 @@ sendBtn.addEventListener(
   sendMessage
 );
 
+/*
+Enter отправляет сообщение.
+Shift + Enter вставляет новую строку.
+*/
+
 messageInput.addEventListener(
   "keydown",
   event => {
@@ -1715,15 +2486,36 @@ messageInput.addEventListener(
 );
 
 /*
-Начальное состояние панели сообщений.
+Переключение языка без перезагрузки страницы.
+*/
+
+ruBtn.addEventListener(
+  "click",
+  () => setLanguage("ru")
+);
+
+enBtn.addEventListener(
+  "click",
+  () => setLanguage("en")
+);
+
+/*
+Применяем начальное состояние Messages
+и выбранный язык сразу после загрузки модуля.
 */
 
 applyMessagesState();
+applyLanguage();
 
 </script>
 
+<!--
+Сервисная строка версии.
+Она не влияет на работу LiveKit.
+-->
+
 <div id="service-console">
-  ru/eng | v1.1.0
+  ru/en switch | v1.2.0
 </div>
 
 <div class="row" id="build-down">
@@ -1731,6 +2523,13 @@ applyMessagesState();
 </div>
 
 <script>
+
+/*
+Этот отдельный обычный script выводит
+дату и время загрузки страницы.
+Он не связан с подключением к комнате.
+*/
+
 (function () {
 
   const now =
