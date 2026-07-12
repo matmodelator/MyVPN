@@ -636,6 +636,60 @@ main {
 }
 
 /*
+Карточка вложения внутри чата.
+*/
+
+.file-message {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.file-message-icon {
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+
+  font-size: 22px;
+}
+
+.file-message-info {
+  min-width: 0;
+}
+
+.file-message-name {
+  display: block;
+
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+
+  overflow-wrap: anywhere;
+}
+
+.file-message-name:hover {
+  text-decoration: underline;
+}
+
+.file-message-meta {
+  margin-top: 4px;
+
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+#addFileBtn.uploading {
+  background: #7c3aed;
+}
+
+
+/*
 Нижняя строка чата:
 
 - textarea занимает оставшуюся ширину;
@@ -1061,6 +1115,7 @@ button.secondary { background: #475569; }
       id="addFileBtn"
       class="secondary"
       type="button"
+      disabled
       data-i18n="addFile">
       Add file
     </button>
@@ -1323,6 +1378,24 @@ const supabase =
   );
 
 /*
+========================================
+SUPABASE STORAGE
+========================================
+
+Вложения загружаются в public bucket chat-files.
+
+Максимальный размер одного файла:
+25 мегабайт.
+*/
+
+const FILES_BUCKET =
+  "chat-files";
+
+const MAX_FILE_SIZE =
+  25 * 1024 * 1024;
+
+
+/*
 Читаем параметры из адресной строки.
 
 Пример:
@@ -1403,6 +1476,11 @@ const translations = {
     clearConsole: "Очистить консоль",
     clearChat: "Очистить чат",
     addFile: "Добавить файл",
+    uploadingFile: "Загрузка...",
+    fileTooLarge: "файл больше 25 МБ",
+    fileUploadError: "ошибка загрузки файла",
+    fileSent: "файл отправлен",
+    downloadFile: "Скачать файл",
     approvalRequired: "Вход только после одобрения создателем комнаты",
     joinRequest: "Запрос на вход",
     userWantsToJoin: "Пользователь хочет присоединиться к комнате",
@@ -1453,6 +1531,11 @@ const translations = {
     clearConsole: "Clear console",
     clearChat: "Clear chat",
     addFile: "Add file",
+    uploadingFile: "Uploading...",
+    fileTooLarge: "file is larger than 25 MB",
+    fileUploadError: "file upload error",
+    fileSent: "file sent",
+    downloadFile: "Download file",
     approvalRequired: "Entry requires creator approval",
     joinRequest: "Join request",
     userWantsToJoin: "A user wants to join this room",
@@ -2705,6 +2788,385 @@ function addMessage(
 }
 
 /*
+========================================
+ВЛОЖЕНИЯ В ЧАТЕ
+========================================
+*/
+
+/*
+Преобразует размер файла в удобный вид.
+*/
+
+function formatFileSize(bytes) {
+
+  const size =
+    Number(bytes) || 0;
+
+  if (size < 1024) {
+    return size + " B";
+  }
+
+  if (size < 1024 * 1024) {
+
+    return (
+      (size / 1024).toFixed(1)
+      + " KB"
+    );
+  }
+
+  return (
+    (size / 1024 / 1024).toFixed(1)
+    + " MB"
+  );
+}
+
+/*
+Очищает имя файла для пути Supabase Storage.
+
+Оригинальное имя файла при этом сохраняется
+и показывается участникам в чате.
+*/
+
+function sanitizeFileName(name) {
+
+  return String(name || "file")
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}._-]+/gu, "_")
+    .replace(/_+/g, "_")
+    .slice(-140);
+}
+
+/*
+Добавляет в чат карточку файла со ссылкой
+для открытия или скачивания.
+*/
+
+function addFileMessage(
+  message,
+  own
+) {
+
+  const empty =
+    document.getElementById(
+      "emptyMessage"
+    );
+
+  if (empty) {
+    empty.remove();
+  }
+
+  const box =
+    document.createElement("div");
+
+  box.className =
+    own
+      ? "message own"
+      : "message";
+
+  const head =
+    document.createElement("div");
+
+  head.className =
+    "message-head";
+
+  const sender =
+    document.createElement("span");
+
+  sender.className =
+    "message-name";
+
+  sender.textContent =
+    own
+      ? message.sender
+        + " ("
+        + t("you")
+        + ")"
+      : message.sender;
+
+  const time =
+    document.createElement("span");
+
+  time.className =
+    "message-time";
+
+  time.textContent =
+    new Date(
+      message.timestamp
+    ).toLocaleTimeString(
+      currentLanguage === "ru"
+        ? "ru-RU"
+        : "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    );
+
+  const card =
+    document.createElement("div");
+
+  card.className =
+    "file-message";
+
+  const icon =
+    document.createElement("div");
+
+  icon.className =
+    "file-message-icon";
+
+  icon.textContent =
+    "📎";
+
+  const info =
+    document.createElement("div");
+
+  info.className =
+    "file-message-info";
+
+  const link =
+    document.createElement("a");
+
+  link.className =
+    "file-message-name";
+
+  link.href =
+    message.fileUrl;
+
+  link.target =
+    "_blank";
+
+  link.rel =
+    "noopener noreferrer";
+
+  link.download =
+    message.fileName;
+
+  link.textContent =
+    message.fileName
+    || t("downloadFile");
+
+  const meta =
+    document.createElement("div");
+
+  meta.className =
+    "file-message-meta";
+
+  meta.textContent =
+    formatFileSize(
+      message.fileSize
+    )
+    + (
+      message.mimeType
+        ? " · " + message.mimeType
+        : ""
+    );
+
+  info.appendChild(link);
+  info.appendChild(meta);
+
+  card.appendChild(icon);
+  card.appendChild(info);
+
+  head.appendChild(sender);
+  head.appendChild(time);
+
+  box.appendChild(head);
+  box.appendChild(card);
+
+  messagesBox.appendChild(box);
+
+  messagesBox.scrollTop =
+    messagesBox.scrollHeight;
+}
+
+/*
+Загружает файл в Supabase Storage.
+
+После загрузки через LiveKit DataChannel
+передаётся только описание файла и ссылка.
+Сам файл через LiveKit не передаётся.
+*/
+
+async function uploadAndSendFile(file) {
+
+  if (
+    !room ||
+    !isConnected
+  ) {
+
+    joinNote.textContent =
+      t("notConnected");
+
+    return;
+  }
+
+  if (!file)
+    return;
+
+  if (
+    file.size >
+    MAX_FILE_SIZE
+  ) {
+
+    joinNote.textContent =
+      t("fileTooLarge");
+
+    return;
+  }
+
+  addFileBtn.disabled =
+    true;
+
+  addFileBtn.classList.add(
+    "uploading"
+  );
+
+  addFileBtn.textContent =
+    t("uploadingFile");
+
+  try {
+
+    const storagePath =
+      normalizeRoomName(roomName)
+      + "/"
+      + browserId
+      + "/"
+      + Date.now()
+      + "-"
+      + sanitizeFileName(
+          file.name
+        );
+
+    const {
+      data: uploadData,
+      error: uploadError
+    } =
+      await supabase.storage
+        .from(FILES_BUCKET)
+        .upload(
+          storagePath,
+          file,
+          {
+            cacheControl:
+              "3600",
+
+            contentType:
+              file.type
+              || "application/octet-stream",
+
+            upsert:
+              false
+          }
+        );
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const {
+      data: publicData
+    } =
+      supabase.storage
+        .from(FILES_BUCKET)
+        .getPublicUrl(
+          uploadData.path
+        );
+
+    const message = {
+      type:
+        "file-message",
+
+      sender:
+        identity,
+
+      senderId:
+        browserId,
+
+      roomName:
+        roomName,
+
+      fileName:
+        file.name,
+
+      fileSize:
+        file.size,
+
+      mimeType:
+        file.type
+        || "application/octet-stream",
+
+      storagePath:
+        uploadData.path,
+
+      fileUrl:
+        publicData.publicUrl,
+
+      timestamp:
+        Date.now()
+    };
+
+    const bytes =
+      new TextEncoder().encode(
+        JSON.stringify(message)
+      );
+
+    await room.localParticipant
+      .publishData(
+        bytes,
+        {
+          reliable:
+            true,
+
+          topic:
+            CHAT_TOPIC
+        }
+      );
+
+    addFileMessage(
+      message,
+      true
+    );
+
+    addEvent(
+      "file",
+      identity
+        + " "
+        + t("fileSent")
+        + ": "
+        + file.name,
+      browserId
+    );
+
+    joinNote.textContent =
+      t("fileSent");
+
+  } catch (error) {
+
+    console.error(
+      "FILE UPLOAD ERROR:",
+      error
+    );
+
+    joinNote.textContent =
+      t("fileUploadError")
+      + ": "
+      + error.message;
+
+  } finally {
+
+    addFileBtn.classList.remove(
+      "uploading"
+    );
+
+    addFileBtn.textContent =
+      t("addFile");
+
+    addFileBtn.disabled =
+      !isConnected;
+  }
+}
+
+/*
 Отправляет сообщение всем участникам комнаты.
 */
 
@@ -2800,31 +3262,113 @@ function handleDataReceived(
       JSON.parse(json);
 
     if (
-      data.type !==
+      data.type ===
       "chat-message"
     ) {
+
+      addMessage(
+        {
+          sender:
+            data.sender ||
+            participant?.identity ||
+            t("unknown"),
+
+          text:
+            String(
+              data.text || ""
+            ),
+
+          timestamp:
+            Number(
+              data.timestamp
+            ) || Date.now()
+        },
+        false
+      );
+
       return;
     }
 
-    addMessage(
-      {
+    if (
+      data.type ===
+      "file-message"
+    ) {
+
+      const fileMessage = {
         sender:
           data.sender ||
           participant?.identity ||
           t("unknown"),
 
-        text:
+        senderId:
           String(
-            data.text || ""
+            data.senderId
+            || participant?.identity
+            || ""
+          ),
+
+        roomName:
+          String(
+            data.roomName
+            || roomName
+          ),
+
+        fileName:
+          String(
+            data.fileName
+            || "file"
+          ),
+
+        fileSize:
+          Number(
+            data.fileSize
+          ) || 0,
+
+        mimeType:
+          String(
+            data.mimeType
+            || "application/octet-stream"
+          ),
+
+        storagePath:
+          String(
+            data.storagePath
+            || ""
+          ),
+
+        fileUrl:
+          String(
+            data.fileUrl
+            || ""
           ),
 
         timestamp:
           Number(
             data.timestamp
           ) || Date.now()
-      },
-      false
-    );
+      };
+
+      if (!fileMessage.fileUrl) {
+        return;
+      }
+
+      addFileMessage(
+        fileMessage,
+        false
+      );
+
+      addEvent(
+        "file",
+        fileMessage.sender
+          + " "
+          + t("fileSent")
+          + ": "
+          + fileMessage.fileName,
+        fileMessage.senderId
+      );
+
+      return;
+    }
 
   } catch (error) {
 
@@ -3267,6 +3811,9 @@ async function joinRoom() {
     leaveBtn.disabled =
       false;
 
+    addFileBtn.disabled =
+      false;
+
     joinNote.textContent = t("connected");
     addEvent("joined", identity + " " + t("userJoined"));
 
@@ -3291,6 +3838,9 @@ async function joinRoom() {
       false;
 
     leaveBtn.disabled =
+      true;
+
+    addFileBtn.disabled =
       true;
 
     applyMessagesState();
@@ -3389,6 +3939,9 @@ function resetDisconnectedState() {
     false;
 
   leaveBtn.disabled =
+    true;
+
+  addFileBtn.disabled =
     true;
 
   statusBox.textContent =
@@ -3521,6 +4074,79 @@ copyLinkBtn.addEventListener(
 );
 
 /*
+Очищает историю чата только на текущем экране.
+У других участников сообщения остаются.
+*/
+
+clearChatBtn.addEventListener(
+  "click",
+  () => {
+
+    messagesBox.innerHTML =
+      "";
+
+    const empty =
+      document.createElement("div");
+
+    empty.id =
+      "emptyMessage";
+
+    empty.className =
+      "empty-message";
+
+    const span =
+      document.createElement("span");
+
+    span.dataset.i18n =
+      "joinChat";
+
+    span.textContent =
+      t("joinChat");
+
+    empty.appendChild(span);
+    messagesBox.appendChild(empty);
+  }
+);
+
+/*
+Открывает системный выбор файла.
+*/
+
+addFileBtn.addEventListener(
+  "click",
+  () => {
+
+    if (!isConnected)
+      return;
+
+    fileInput.click();
+  }
+);
+
+/*
+После выбора запускается загрузка в Storage.
+*/
+
+fileInput.addEventListener(
+  "change",
+  async () => {
+
+    const file =
+      fileInput.files[0];
+
+    fileInput.value =
+      "";
+
+    if (!file)
+      return;
+
+    await uploadAndSendFile(
+      file
+    );
+  }
+);
+
+/*
 Применяем начальное состояние Messages
 и выбранный язык сразу после загрузки модуля.
 */
@@ -3537,7 +4163,7 @@ applyLanguage();
 -->
 
 <div id="service-console">
-  equal panels + file button | v1.5.0
+  Supabase file transfer | v1.6.0
 </div>
 
 <div class="row" id="build-down">
@@ -3547,18 +4173,14 @@ applyLanguage();
 <script>
 
 /*
-консоль и мессенджер теперь одинаковой ширины — по 330px;
-добавлена кнопка Очистить чат;
-в каждом событии консоли выводятся:
-имя или ID;
-название комнаты;
-время;
-имя стало необязательным;
-если имя пустое, участник подключается под своим browserId;
-RU/EN перенесены в левый верхний угол;
-справа сверху добавлена кнопка Добавить файл;
-выбор файла уже открывается и фиксируется в консоли;
-сама загрузка файла в Supabase Storage пока не подключена.
+файл загружается в Supabase Storage;
+в чат отправляется карточка со ссылкой для скачивания;
+остальные участники получают её через LiveKit;
+событие появляется в левой консоли;
+максимальный размер — 25 МБ;
+кнопка Добавить файл активна только после подключения;
+исправлена и подключена кнопка Очистить чат;
+синтаксис JavaScript проверен.
 */
 
 (function () {
